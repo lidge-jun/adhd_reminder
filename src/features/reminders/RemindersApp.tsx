@@ -1,0 +1,338 @@
+import { CheckCircle, Circle, DotsThree, Flag } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
+import { PriorityRail } from './components/PriorityRail';
+import { ReminderEditorPopover } from './components/ReminderEditorPopover';
+import { SettingsPanel } from './components/SettingsPanel';
+import { Sidebar } from './components/Sidebar';
+import {
+  createReminderTranslator,
+  type ReminderLocale,
+  type ReminderTranslator,
+  type TranslationKey,
+} from './reminder.i18n';
+import type { MatrixBucket } from './reminder.matrix';
+import type { Reminder } from './reminder.schema';
+import { useReminderController, type MatrixGroups } from './useReminderController';
+
+const REMINDER_DRAG_MIME = 'application/x-jaw-reminder-id';
+const LOCALE_STORAGE_KEY = 'jaw-reminders.locale';
+
+export function RemindersApp(): React.JSX.Element {
+  const controller = useReminderController();
+  const [locale, setLocale] = useState<ReminderLocale>(() => loadLocale());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const t = useMemo(() => createReminderTranslator(locale), [locale]);
+  const [bucketDrafts, setBucketDrafts] = useState<Record<MatrixBucket, string>>({
+    urgentImportant: '',
+    important: '',
+    waiting: '',
+    later: '',
+  });
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+
+  if (!controller.snapshot) {
+    return <main className="boot-screen">Loading reminders</main>;
+  }
+
+  const editingReminder =
+    controller.snapshot.reminders.find((reminder) => reminder.id === editingReminderId) ?? null;
+
+  return (
+    <main
+      className="app-shell"
+      onKeyDown={(event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          controller.moveSelection(1);
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          controller.moveSelection(-1);
+        }
+      }}
+    >
+      <Sidebar
+        snapshot={controller.snapshot}
+        isNative={controller.isNative}
+        t={t}
+        onSelectView={controller.selectViewId}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <section className="matrix-pane" aria-label="Priority matrix">
+        <header className="matrix-titlebar">
+          <div>
+            <h1>{t('matrix.title')}</h1>
+            <p>{controller.snapshot.reminders.length}{t('matrix.items')}</p>
+          </div>
+          <span>{controller.isNative ? t('matrix.rustStore') : t('matrix.browserStore')}</span>
+        </header>
+
+        <div className="matrix-board">
+          <div className="matrix-axis matrix-axis-y">
+            <span>{t('matrix.importance')}</span>
+            <b>↑</b>
+          </div>
+          <div className="matrix-axis matrix-axis-x">
+            <span>{t('matrix.urgency')}</span>
+            <b>→</b>
+          </div>
+          <MatrixQuadrant
+            bucket="urgentImportant"
+            title={t('matrix.urgentImportant')}
+            tone="red"
+            count={controller.matrixGroups.urgentImportant.length}
+            reminders={controller.matrixGroups.urgentImportant}
+            selectedReminderId={controller.snapshot.selectedReminderId}
+            t={t}
+            onSelect={controller.selectReminder}
+            onOpenDetails={setEditingReminderId}
+            onToggle={controller.toggleDone}
+            draft={bucketDrafts.urgentImportant}
+            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: value }))}
+            onAdd={async () => {
+              await controller.addReminderToBucket('urgentImportant', bucketDrafts.urgentImportant);
+              setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: '' }));
+            }}
+            onDropReminder={controller.moveReminderToBucket}
+          />
+          <MatrixQuadrant
+            bucket="important"
+            title={t('matrix.important')}
+            tone="green"
+            count={controller.matrixGroups.important.length}
+            reminders={controller.matrixGroups.important}
+            selectedReminderId={controller.snapshot.selectedReminderId}
+            t={t}
+            onSelect={controller.selectReminder}
+            onOpenDetails={setEditingReminderId}
+            onToggle={controller.toggleDone}
+            draft={bucketDrafts.important}
+            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, important: value }))}
+            onAdd={async () => {
+              await controller.addReminderToBucket('important', bucketDrafts.important);
+              setBucketDrafts((drafts) => ({ ...drafts, important: '' }));
+            }}
+            onDropReminder={controller.moveReminderToBucket}
+          />
+          <MatrixQuadrant
+            bucket="waiting"
+            title={t('matrix.waiting')}
+            tone="amber"
+            count={controller.matrixGroups.waiting.length}
+            reminders={controller.matrixGroups.waiting}
+            selectedReminderId={controller.snapshot.selectedReminderId}
+            t={t}
+            onSelect={controller.selectReminder}
+            onOpenDetails={setEditingReminderId}
+            onToggle={controller.toggleDone}
+            draft={bucketDrafts.waiting}
+            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, waiting: value }))}
+            onAdd={async () => {
+              await controller.addReminderToBucket('waiting', bucketDrafts.waiting);
+              setBucketDrafts((drafts) => ({ ...drafts, waiting: '' }));
+            }}
+            onDropReminder={controller.moveReminderToBucket}
+          />
+          <MatrixQuadrant
+            bucket="later"
+            title={t('matrix.later')}
+            tone="blue"
+            count={controller.matrixGroups.later.length}
+            reminders={controller.matrixGroups.later}
+            selectedReminderId={controller.snapshot.selectedReminderId}
+            t={t}
+            onSelect={controller.selectReminder}
+            onOpenDetails={setEditingReminderId}
+            onToggle={controller.toggleDone}
+            draft={bucketDrafts.later}
+            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, later: value }))}
+            onAdd={async () => {
+              await controller.addReminderToBucket('later', bucketDrafts.later);
+              setBucketDrafts((drafts) => ({ ...drafts, later: '' }));
+            }}
+            onDropReminder={controller.moveReminderToBucket}
+          />
+        </div>
+      </section>
+
+      <PriorityRail
+        snapshot={controller.snapshot}
+        matrixGroups={controller.matrixGroups}
+        selectedReminder={controller.selectedReminder}
+        t={t}
+        onOpenDetails={setEditingReminderId}
+        onToggle={controller.toggleDone}
+      />
+
+      <ReminderEditorPopover
+        reminder={editingReminder}
+        t={t}
+        onClose={() => setEditingReminderId(null)}
+        onFocus={controller.focusReminder}
+        onDelete={async (reminderId) => {
+          await controller.deleteReminderById(reminderId);
+          setEditingReminderId(null);
+        }}
+        onTitleChange={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
+        onNotesChange={(reminderId, notes) => controller.updateReminderById(reminderId, { notes })}
+      />
+      {settingsOpen ? (
+        <SettingsPanel
+          locale={locale}
+          t={t}
+          onLocaleChange={(nextLocale) => {
+            setLocale(nextLocale);
+            window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
+    </main>
+  );
+}
+
+type MatrixQuadrantProps = {
+  bucket: MatrixBucket;
+  title: string;
+  tone: 'red' | 'green' | 'amber' | 'blue';
+  count: number;
+  reminders: MatrixGroups[keyof MatrixGroups];
+  selectedReminderId: string | null;
+  t: ReminderTranslator;
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onAdd: () => Promise<void>;
+  onSelect: (reminderId: string) => void;
+  onOpenDetails: (reminderId: string) => void;
+  onToggle: (reminderId: string) => Promise<void>;
+  onDropReminder: (reminderId: string, bucket: MatrixBucket) => Promise<void>;
+};
+
+function MatrixQuadrant({
+  bucket,
+  title,
+  tone,
+  count,
+  reminders,
+  selectedReminderId,
+  t,
+  draft,
+  onDraftChange,
+  onAdd,
+  onSelect,
+  onOpenDetails,
+  onToggle,
+  onDropReminder,
+}: MatrixQuadrantProps): React.JSX.Element {
+  return (
+    <section
+      className={`matrix-quadrant tone-${tone}`}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        const reminderId = event.dataTransfer.getData(REMINDER_DRAG_MIME);
+        if (reminderId) {
+          void onDropReminder(reminderId, bucket);
+        }
+      }}
+    >
+      <header>
+        <h2>{title}</h2>
+        <span>{count}</span>
+      </header>
+      <ul>
+        {reminders.map((reminder) => (
+          <MatrixReminderRow
+            key={reminder.id}
+            reminder={reminder}
+            selected={selectedReminderId === reminder.id}
+            t={t}
+            onSelect={onSelect}
+            onOpenDetails={onOpenDetails}
+            onToggle={onToggle}
+          />
+        ))}
+        <li className="matrix-inline-create">
+          <Circle size={16} />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onAdd();
+            }}
+          >
+            <input
+              aria-label={`${title} 새 미리알림`}
+              placeholder={t('matrix.create')}
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+            />
+          </form>
+        </li>
+        {reminders.length === 0 ? <li className="matrix-empty">{t('matrix.empty')}</li> : null}
+      </ul>
+    </section>
+  );
+}
+
+type MatrixReminderRowProps = {
+  reminder: Reminder;
+  selected: boolean;
+  t: ReminderTranslator;
+  onSelect: (reminderId: string) => void;
+  onOpenDetails: (reminderId: string) => void;
+  onToggle: (reminderId: string) => Promise<void>;
+};
+
+function MatrixReminderRow({
+  reminder,
+  selected,
+  t,
+  onSelect,
+  onOpenDetails,
+  onToggle,
+}: MatrixReminderRowProps): React.JSX.Element {
+  const done = reminder.status === 'done';
+
+  return (
+    <li
+      className={`matrix-reminder-row ${selected ? 'is-selected' : ''} ${done ? 'is-done' : ''}`}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(REMINDER_DRAG_MIME, reminder.id);
+      }}
+    >
+      <button type="button" className="row-check" onClick={() => void onToggle(reminder.id)}>
+        <CheckCircle size={18} weight={done ? 'fill' : 'regular'} />
+      </button>
+      <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
+        <span>{reminder.title}</span>
+        <small>{subtitleForReminder(reminder, t)}</small>
+      </button>
+      <button type="button" className="row-detail-button" aria-label="상세 열기" onClick={() => onOpenDetails(reminder.id)}>
+        <DotsThree size={18} weight="bold" />
+      </button>
+      {reminder.priority === 'high' ? <Flag className="row-flag" size={15} weight="fill" /> : null}
+    </li>
+  );
+}
+
+function subtitleForReminder(reminder: Reminder, t: ReminderTranslator): string {
+  const parts: string[] = [
+    t(`status.${reminder.status}` as TranslationKey),
+    t(`priority.${reminder.priority}` as TranslationKey),
+  ];
+  if (reminder.linkedInstance) {
+    parts.push(reminder.linkedInstance);
+  }
+  return parts.join(' · ');
+}
+
+function loadLocale(): ReminderLocale {
+  const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  return saved === 'en' ? 'en' : 'ko';
+}
