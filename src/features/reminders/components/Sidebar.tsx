@@ -10,7 +10,16 @@ import {
 } from '@phosphor-icons/react';
 import type { ReminderList, ReminderSnapshot, ReminderViewId, SmartListId } from '../reminder.schema';
 import type { ReminderTranslator } from '../reminder.i18n';
+import { selectRemindersForView } from '../reminder.store';
 import { cn } from '../../../shared/cn';
+
+const SMART_LIST_TONE: Record<SmartListId, string> = {
+  today: 'tone-red',
+  focus: 'tone-green',
+  waiting: 'tone-amber',
+  later: 'tone-blue',
+  done: 'tone-grey',
+};
 
 type SidebarProps = {
   snapshot: ReminderSnapshot;
@@ -57,11 +66,11 @@ export function Sidebar({
         </button>
         {smartLists.map((item) => {
           const Icon = item.icon;
-          const count = countForSmartList(snapshot, item.id);
+          const count = selectRemindersForView(snapshot.reminders, item.id).length;
 
           return (
             <button
-              className={cn('smart-list-button', snapshot.selectedViewId === item.id && 'is-active')}
+              className={cn('smart-list-button', SMART_LIST_TONE[item.id], snapshot.selectedViewId === item.id && 'is-active')}
               key={item.id}
               type="button"
               onClick={() => onSelectView(item.id)}
@@ -74,23 +83,29 @@ export function Sidebar({
         })}
       </nav>
 
-      <button className="settings-button" type="button" onClick={onOpenSettings}>
-        <GearSix size={17} />
-        <span>{t('nav.settings')}</span>
-      </button>
+      {snapshot.lists.length > 0 && (
+        <>
+          <div className="sidebar-section-label">{t('nav.myLists')}</div>
+          <nav className="user-list-nav" aria-label="User lists">
+            {snapshot.lists.map((list) => (
+              <UserListButton
+                key={list.id}
+                list={list}
+                active={snapshot.selectedViewId === `list:${list.id}`}
+                count={snapshot.reminders.filter((reminder) => reminder.listId === list.id).length}
+                onSelectView={onSelectView}
+              />
+            ))}
+          </nav>
+        </>
+      )}
 
-      <div className="sidebar-section-label">{t('nav.myLists')}</div>
-      <nav className="user-list-nav" aria-label="User lists">
-        {snapshot.lists.map((list) => (
-          <UserListButton
-            key={list.id}
-            list={list}
-            active={snapshot.selectedViewId === `list:${list.id}`}
-            count={snapshot.reminders.filter((reminder) => reminder.listId === list.id).length}
-            onSelectView={onSelectView}
-          />
-        ))}
-      </nav>
+      <div className="sidebar-footer">
+        <button className="settings-button" type="button" onClick={onOpenSettings}>
+          <GearSix size={17} />
+          <span>{t('nav.settings')}</span>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -116,18 +131,3 @@ function UserListButton({ list, active, count, onSelectView }: UserListButtonPro
   );
 }
 
-function countForSmartList(snapshot: ReminderSnapshot, id: SmartListId): number {
-  if (id === 'done') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'done').length;
-  }
-
-  if (id === 'focus') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'focused').length;
-  }
-
-  if (id === 'waiting') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'waiting').length;
-  }
-
-  return snapshot.reminders.filter((reminder) => reminder.listId === id && reminder.status !== 'done').length;
-}

@@ -35,6 +35,11 @@ export type TranslationKey =
   | 'settings.language'
   | 'settings.korean'
   | 'settings.english'
+  | 'settings.zoom'
+  | 'settings.zoomIn'
+  | 'settings.zoomOut'
+  | 'settings.zoomReset'
+  | 'settings.zoomHint'
   | 'settings.close'
   | 'popover.title'
   | 'popover.notes'
@@ -59,10 +64,10 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'app.title': '미리알림',
     'app.localBrowser': '로컬 브라우저',
     'app.localMac': '이 Mac',
-    'nav.matrix': '우선순위 매트릭스',
-    'nav.today': '오늘',
+    'nav.matrix': '매트릭스',
+    'nav.today': '긴급',
     'nav.focus': '집중',
-    'nav.waiting': '대기',
+    'nav.waiting': '위임',
     'nav.later': '나중에',
     'nav.done': '완료',
     'nav.myLists': '나의 목록',
@@ -90,6 +95,11 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'settings.language': '언어',
     'settings.korean': '한국어',
     'settings.english': 'English',
+    'settings.zoom': '화면 배율',
+    'settings.zoomIn': '확대',
+    'settings.zoomOut': '축소',
+    'settings.zoomReset': '기본값으로',
+    'settings.zoomHint': '단축키: ⌘+ 확대, ⌘− 축소, ⌘0 기본값',
     'settings.close': '닫기',
     'popover.title': '미리알림',
     'popover.notes': '메모',
@@ -113,8 +123,8 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'app.title': 'Reminders',
     'app.localBrowser': 'Local Browser',
     'app.localMac': 'This Mac',
-    'nav.matrix': 'Priority Matrix',
-    'nav.today': 'Today',
+    'nav.matrix': 'Matrix',
+    'nav.today': 'Urgent',
     'nav.focus': 'Focus',
     'nav.waiting': 'Waiting',
     'nav.later': 'Later',
@@ -144,6 +154,11 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'settings.language': 'Language',
     'settings.korean': '한국어',
     'settings.english': 'English',
+    'settings.zoom': 'Zoom',
+    'settings.zoomIn': 'Zoom in',
+    'settings.zoomOut': 'Zoom out',
+    'settings.zoomReset': 'Reset to default',
+    'settings.zoomHint': 'Shortcuts: ⌘+ to zoom in, ⌘− to zoom out, ⌘0 to reset',
     'settings.close': 'Close',
     'popover.title': 'Reminder',
     'popover.notes': 'Notes',

@@ -4,14 +4,9 @@ const now = '2026-05-08T02:08:00.000Z';
 
 export const seedSnapshot: ReminderSnapshot = {
   schemaVersion: 1,
-  selectedViewId: 'today',
+  selectedViewId: 'matrix',
   selectedReminderId: null,
-  lists: [
-    { id: 'today', name: '오늘', accent: '#0f8fd6' },
-    { id: 'focus', name: '집중', accent: '#d4477f' },
-    { id: 'waiting', name: '대기', accent: '#b67818' },
-    { id: 'later', name: '나중에', accent: '#667085' },
-  ],
+  lists: [],
   reminders: [],
 };
 

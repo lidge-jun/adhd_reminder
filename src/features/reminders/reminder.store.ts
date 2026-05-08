@@ -11,6 +11,7 @@ import type {
   UpdateReminderInput,
 } from './reminder.schema';
 import { seedSnapshot } from './reminder.fixtures';
+import { resolveReminderMatrixBucket } from './reminder.matrix';
 
 export const smartListIds: SmartListId[] = ['today', 'focus', 'waiting', 'later', 'done'];
 
@@ -178,22 +179,10 @@ export function selectRemindersForView(
   if (viewId === 'done') {
     return reminders.filter((reminder) => reminder.status === 'done');
   }
-  if (viewId === 'focus') {
-    return reminders.filter((reminder) => reminder.status === 'focused');
-  }
-  if (viewId === 'waiting') {
-    return reminders.filter((reminder) => reminder.status === 'waiting');
-  }
-  if (viewId === 'later') {
-    return reminders.filter(
-      (reminder) => reminder.listId === 'later' && reminder.status !== 'done',
-    );
-  }
-  if (viewId === 'today') {
-    return reminders.filter(
-      (reminder) => reminder.listId === 'today' && reminder.status !== 'done',
-    );
-  }
+  if (viewId === 'today')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'urgentImportant');
+  if (viewId === 'focus')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'important');
+  if (viewId === 'waiting') return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'waiting');
+  if (viewId === 'later')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'later');
 
   const listId = viewId.slice('list:'.length);
   return reminders.filter((reminder) => reminder.listId === listId);

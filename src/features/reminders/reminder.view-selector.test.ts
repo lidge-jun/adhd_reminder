@@ -45,22 +45,22 @@ describe('selectRemindersForView', () => {
     expect(result.map((r) => r.id)).toEqual(['r-today-done']);
   });
 
-  it('focus returns only status=focused', () => {
-    const result = selectRemindersForView(reminders, 'focus');
-    expect(result.map((r) => r.id)).toEqual(['r-focused']);
-  });
-
-  it('waiting returns only status=waiting', () => {
-    const result = selectRemindersForView(reminders, 'waiting');
-    expect(result.map((r) => r.id)).toEqual(['r-waiting']);
-  });
-
-  it('today returns listId=today and not done', () => {
+  it('today returns matrix urgentImportant bucket items', () => {
     const result = selectRemindersForView(reminders, 'today');
     expect(result.map((r) => r.id)).toEqual(['r-today-open', 'r-focused']);
   });
 
-  it('later returns listId=later and not done', () => {
+  it('focus returns matrix important bucket items', () => {
+    const result = selectRemindersForView(reminders, 'focus');
+    expect(result.map((r) => r.id)).toEqual(['r-custom']);
+  });
+
+  it('waiting returns matrix waiting bucket items', () => {
+    const result = selectRemindersForView(reminders, 'waiting');
+    expect(result.map((r) => r.id)).toEqual(['r-waiting']);
+  });
+
+  it('later returns matrix later bucket items', () => {
     const result = selectRemindersForView(reminders, 'later');
     expect(result.map((r) => r.id)).toEqual(['r-later']);
   });

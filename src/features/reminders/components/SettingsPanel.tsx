@@ -1,18 +1,26 @@
-import { X } from '@phosphor-icons/react';
+import { Minus, Plus, X } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
 import type { ReminderLocale, ReminderTranslator } from '../reminder.i18n';
 
 type SettingsPanelProps = {
   locale: ReminderLocale;
+  zoom: number;
   t: ReminderTranslator;
   onLocaleChange: (locale: ReminderLocale) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
   onClose: () => void;
 };
 
 export function SettingsPanel({
   locale,
+  zoom,
   t,
   onLocaleChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   onClose,
 }: SettingsPanelProps): React.JSX.Element {
   const panelRef = useRef<HTMLElement>(null);
@@ -69,6 +77,26 @@ export function SettingsPanel({
             </button>
           </div>
         </div>
+        <div className="settings-field">
+          <span>{t('settings.zoom')}</span>
+          <div className="zoom-control">
+            <button type="button" aria-label={t('settings.zoomOut')} onClick={onZoomOut}>
+              <Minus size={14} weight="bold" />
+            </button>
+            <button
+              type="button"
+              className="zoom-reset"
+              aria-label={t('settings.zoomReset')}
+              onClick={onZoomReset}
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button type="button" aria-label={t('settings.zoomIn')} onClick={onZoomIn}>
+              <Plus size={14} weight="bold" />
+            </button>
+          </div>
+        </div>
+        <p className="settings-hint">{t('settings.zoomHint')}</p>
       </section>
     </div>
   );

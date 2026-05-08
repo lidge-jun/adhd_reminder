@@ -1,5 +1,5 @@
 import { CheckCircle, Circle, DotsThree, Flag } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PriorityRail } from './components/PriorityRail';
 import { ReminderEditorPopover } from './components/ReminderEditorPopover';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -17,12 +17,42 @@ import { useReminderController, type MatrixGroups } from './useReminderControlle
 
 const REMINDER_DRAG_MIME = 'application/x-jaw-reminder-id';
 const LOCALE_STORAGE_KEY = 'jaw-reminders.locale';
+const ZOOM_STORAGE_KEY = 'jaw-reminders.zoom';
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 1.6;
+const ZOOM_STEP = 0.1;
 
 export function RemindersApp(): React.JSX.Element {
   const controller = useReminderController();
   const [locale, setLocale] = useState<ReminderLocale>(() => loadLocale());
+  const [zoom, setZoom] = useState<number>(() => loadZoom());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const t = useMemo(() => createReminderTranslator(locale), [locale]);
+
+  useEffect(() => {
+    document.documentElement.style.zoom = String(zoom);
+    window.localStorage.setItem(ZOOM_STORAGE_KEY, String(zoom));
+  }, [zoom]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (!(event.metaKey || event.ctrlKey)) {
+        return;
+      }
+      if (event.key === '=' || event.key === '+') {
+        event.preventDefault();
+        setZoom((current) => clampZoom(current + ZOOM_STEP));
+      } else if (event.key === '-' || event.key === '_') {
+        event.preventDefault();
+        setZoom((current) => clampZoom(current - ZOOM_STEP));
+      } else if (event.key === '0') {
+        event.preventDefault();
+        setZoom(1);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const [bucketDrafts, setBucketDrafts] = useState<Record<MatrixBucket, string>>({
     urgentImportant: '',
     important: '',
@@ -218,11 +248,15 @@ export function RemindersApp(): React.JSX.Element {
       {settingsOpen ? (
         <SettingsPanel
           locale={locale}
+          zoom={zoom}
           t={t}
           onLocaleChange={(nextLocale) => {
             setLocale(nextLocale);
             window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
           }}
+          onZoomIn={() => setZoom((current) => clampZoom(current + ZOOM_STEP))}
+          onZoomOut={() => setZoom((current) => clampZoom(current - ZOOM_STEP))}
+          onZoomReset={() => setZoom(1)}
           onClose={() => setSettingsOpen(false)}
         />
       ) : null}
@@ -370,6 +404,24 @@ function subtitleForReminder(reminder: Reminder, t: ReminderTranslator): string 
 function loadLocale(): ReminderLocale {
   const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   return saved === 'en' ? 'en' : 'ko';
+}
+
+function loadZoom(): number {
+  const saved = window.localStorage.getItem(ZOOM_STORAGE_KEY);
+  if (!saved) {
+    return 1;
+  }
+  const parsed = Number.parseFloat(saved);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+  return clampZoom(parsed);
+}
+
+function clampZoom(value: number): number {
+  if (value < ZOOM_MIN) return ZOOM_MIN;
+  if (value > ZOOM_MAX) return ZOOM_MAX;
+  return Math.round(value * 100) / 100;
 }
 
 const SMART_LIST_TITLE_KEY: Record<SmartListId, TranslationKey> = {

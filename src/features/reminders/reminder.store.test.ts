@@ -29,7 +29,7 @@ describe('reminder store', () => {
   });
 
   it('filters smart views without persisting selection to data', () => {
-    expect(getVisibleReminders(demoSnapshot, 'focus').map((reminder) => reminder.id)).toEqual(['r-focus']);
+    expect(getVisibleReminders(demoSnapshot, 'focus').map((reminder) => reminder.id)).toEqual(['r-next-1']);
     expect(getVisibleReminders(demoSnapshot, 'done')).toEqual([]);
   });
 });
