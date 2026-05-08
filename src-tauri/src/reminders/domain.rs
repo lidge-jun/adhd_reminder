@@ -228,6 +228,42 @@ mod tests {
     use super::*;
     use crate::reminders::seed::seed_snapshot;
 
+    fn snapshot_with_two_reminders() -> ReminderSnapshot {
+        let mut snapshot = seed_snapshot();
+        let now = "2026-05-08T02:08:00.000Z".to_string();
+        snapshot.reminders = vec![
+            Reminder {
+                id: "r-1".to_string(),
+                title: "Focused".to_string(),
+                notes: String::new(),
+                list_id: "today".to_string(),
+                status: ReminderStatus::Focused,
+                priority: ReminderPriority::High,
+                due_at: None,
+                remind_at: None,
+                linked_instance: None,
+                subtasks: vec![],
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            },
+            Reminder {
+                id: "r-2".to_string(),
+                title: "Open".to_string(),
+                notes: String::new(),
+                list_id: "today".to_string(),
+                status: ReminderStatus::Open,
+                priority: ReminderPriority::Normal,
+                due_at: None,
+                remind_at: None,
+                linked_instance: None,
+                subtasks: vec![],
+                created_at: now.clone(),
+                updated_at: now,
+            },
+        ];
+        snapshot
+    }
+
     #[test]
     fn validates_seed_snapshot() {
         validate_snapshot(&seed_snapshot()).expect("seed must be valid");
@@ -235,7 +271,7 @@ mod tests {
 
     #[test]
     fn rejects_multiple_focused_reminders() {
-        let mut snapshot = seed_snapshot();
+        let mut snapshot = snapshot_with_two_reminders();
         snapshot.reminders[1].status = ReminderStatus::Focused;
 
         let error = validate_snapshot(&snapshot).expect_err("two focused reminders should fail");
@@ -244,7 +280,7 @@ mod tests {
 
     #[test]
     fn rejects_missing_list_references() {
-        let mut snapshot = seed_snapshot();
+        let mut snapshot = snapshot_with_two_reminders();
         snapshot.reminders[0].list_id = "missing".into();
 
         let error = validate_snapshot(&snapshot).expect_err("missing list reference should fail");

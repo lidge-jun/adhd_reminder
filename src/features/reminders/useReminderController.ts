@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   Reminder,
   ReminderDataSnapshot,
@@ -44,7 +44,9 @@ export type ReminderController = {
   visibleReminders: Reminder[];
   matrixGroups: MatrixGroups;
   status: ControllerStatus;
+  mutationError: string | null;
   isNative: boolean;
+  clearMutationError: () => void;
   selectViewId: (viewId: ReminderViewId) => void;
   selectReminder: (reminderId: string) => void;
   toggleDone: (reminderId: string) => Promise<void>;
@@ -67,7 +69,9 @@ export function useReminderController(): ReminderController {
   const [data, setData] = useState<ReminderDataSnapshot | null>(null);
   const [view, setView] = useState<ReminderViewState | null>(null);
   const [status, setStatus] = useState<ControllerStatus>('loading');
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [isNative] = useState(() => isTauriRuntime());
+  const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let active = true;
@@ -128,7 +132,7 @@ export function useReminderController(): ReminderController {
     }
     return snapshot.reminders.find((reminder) => reminder.id === snapshot.selectedReminderId) ?? null;
   }, [snapshot]);
-  const matrixGroups = useMemo(() => groupForMatrix(snapshot?.reminders ?? []), [snapshot]);
+  const matrixGroups = useMemo(() => groupForMatrix(visibleReminders), [visibleReminders]);
 
   function applyBrowser(next: ReminderSnapshot): void {
     setData(next);
@@ -160,6 +164,26 @@ export function useReminderController(): ReminderController {
     );
   }
 
+  async function runNativeMutation(
+    action: () => Promise<ReminderDataSnapshot>,
+    afterCommit?: (next: ReminderDataSnapshot) => void,
+  ): Promise<void> {
+    const run = mutationQueueRef.current.then(async () => {
+      try {
+        setMutationError(null);
+        const next = await action();
+        setData(next);
+        afterCommit?.(next);
+      } catch (error) {
+        console.error('[reminders] mutation failed', error);
+        setMutationError('save_failed');
+      }
+    });
+
+    mutationQueueRef.current = run.catch(() => undefined);
+    await run;
+  }
+
   async function toggleDone(reminderId: string): Promise<void> {
     if (!snapshot) {
       return;
@@ -175,7 +199,7 @@ export function useReminderController(): ReminderController {
     };
 
     if (isNative) {
-      setData(await updateReminderNative(reminderId, input));
+      await runNativeMutation(() => updateReminderNative(reminderId, input));
     } else {
       applyBrowser(toggleReminder(snapshot, reminderId));
     }
@@ -187,8 +211,9 @@ export function useReminderController(): ReminderController {
     }
 
     if (isNative) {
-      setData(await setFocusReminderNative(reminderId));
-      setView((current) => (current ? { ...current, selectedReminderId: reminderId } : current));
+      await runNativeMutation(() => setFocusReminderNative(reminderId), () => {
+        setView((current) => (current ? { ...current, selectedReminderId: reminderId } : current));
+      });
     } else {
       applyBrowser(setSingleFocus(snapshot, reminderId));
     }
@@ -200,16 +225,16 @@ export function useReminderController(): ReminderController {
     }
 
     if (isNative) {
-      const next = await deleteReminderNative(reminderId);
-      setData(next);
-      setView((current) =>
-        current
-          ? {
-              ...current,
-              selectedReminderId: getVisibleReminders(mergeSnapshot(next, current))[0]?.id ?? null,
-            }
-          : current,
-      );
+      await runNativeMutation(() => deleteReminderNative(reminderId), (next) => {
+        setView((current) =>
+          current
+            ? {
+                ...current,
+                selectedReminderId: getVisibleReminders(mergeSnapshot(next, current))[0]?.id ?? null,
+              }
+            : current,
+        );
+      });
     } else {
       applyBrowser(deleteReminder(snapshot, reminderId));
     }
@@ -221,7 +246,7 @@ export function useReminderController(): ReminderController {
     }
 
     if (isNative) {
-      setData(await updateReminderNative(reminderId, input));
+      await runNativeMutation(() => updateReminderNative(reminderId, input));
     } else {
       applyBrowser(patchReminder(snapshot, reminderId, input));
     }
@@ -234,12 +259,12 @@ export function useReminderController(): ReminderController {
 
     const input = matrixBucketToCreateInput(bucket, title);
     if (isNative) {
-      const next = await createReminderNative(input);
-      setData(next);
-      setView((current) => ({
-        selectedViewId: current?.selectedViewId ?? 'today',
-        selectedReminderId: next.reminders[0]?.id ?? current?.selectedReminderId ?? null,
-      }));
+      await runNativeMutation(() => createReminderNative(input), (next) => {
+        setView((current) => ({
+          selectedViewId: current?.selectedViewId ?? 'today',
+          selectedReminderId: next.reminders[0]?.id ?? current?.selectedReminderId ?? null,
+        }));
+      });
     } else {
       applyBrowser(addReminderWithInput(snapshot, input));
     }
@@ -257,7 +282,7 @@ export function useReminderController(): ReminderController {
 
     const input = matrixBucketToUpdateInput(bucket);
     if (isNative) {
-      setData(await updateReminderNative(reminderId, input));
+      await runNativeMutation(() => updateReminderNative(reminderId, input));
     } else {
       applyBrowser(patchReminder(snapshot, reminderId, input));
     }
@@ -288,7 +313,9 @@ export function useReminderController(): ReminderController {
     visibleReminders,
     matrixGroups,
     status,
+    mutationError,
     isNative,
+    clearMutationError: () => setMutationError(null),
     selectViewId,
     selectReminder,
     toggleDone,

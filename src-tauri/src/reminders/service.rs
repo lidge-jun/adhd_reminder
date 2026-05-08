@@ -133,6 +133,42 @@ mod tests {
     use crate::reminders::domain::{ReminderPriority, ReminderStatus, UpdateReminderInput};
     use crate::reminders::seed::seed_snapshot;
 
+    fn demo_snapshot() -> ReminderSnapshot {
+        let mut snapshot = seed_snapshot();
+        let now = "2026-05-08T02:08:00.000Z".to_string();
+        snapshot.reminders = vec![
+            Reminder {
+                id: "r-focus".to_string(),
+                title: "Focus".to_string(),
+                notes: String::new(),
+                list_id: "today".to_string(),
+                status: ReminderStatus::Focused,
+                priority: ReminderPriority::High,
+                due_at: Some("2026-05-08T03:00:00.000Z".to_string()),
+                remind_at: Some("2026-05-08T02:40:00.000Z".to_string()),
+                linked_instance: Some(":3333".to_string()),
+                subtasks: vec![],
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            },
+            Reminder {
+                id: "r-next-1".to_string(),
+                title: "Next".to_string(),
+                notes: String::new(),
+                list_id: "today".to_string(),
+                status: ReminderStatus::Open,
+                priority: ReminderPriority::Normal,
+                due_at: None,
+                remind_at: None,
+                linked_instance: None,
+                subtasks: vec![],
+                created_at: now.clone(),
+                updated_at: now,
+            },
+        ];
+        snapshot
+    }
+
     #[test]
     fn create_generates_r_prefixed_id_and_timestamps() {
         let snapshot = seed_snapshot();
@@ -157,7 +193,7 @@ mod tests {
 
     #[test]
     fn update_uses_tri_state_nullable_fields() {
-        let snapshot = seed_snapshot();
+        let snapshot = demo_snapshot();
         let next = update_reminder(
             &snapshot,
             "r-focus",
@@ -184,7 +220,7 @@ mod tests {
 
     #[test]
     fn update_can_move_between_lists() {
-        let snapshot = seed_snapshot();
+        let snapshot = demo_snapshot();
         let next = update_reminder(
             &snapshot,
             "r-next-1",
@@ -208,7 +244,7 @@ mod tests {
 
     #[test]
     fn update_rejects_direct_focus_status() {
-        let snapshot = seed_snapshot();
+        let snapshot = demo_snapshot();
         let error = update_reminder(
             &snapshot,
             "r-next-1",
@@ -224,7 +260,7 @@ mod tests {
 
     #[test]
     fn set_focus_demotes_prior_focus() {
-        let snapshot = seed_snapshot();
+        let snapshot = demo_snapshot();
         let next = set_focus_reminder(&snapshot, "r-next-1").expect("focus succeeds");
 
         assert_eq!(

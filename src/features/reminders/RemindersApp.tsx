@@ -31,7 +31,11 @@ export function RemindersApp(): React.JSX.Element {
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
 
   if (!controller.snapshot) {
-    return <main className="boot-screen">Loading reminders</main>;
+    return (
+      <main className="boot-screen">
+        {controller.status === 'error' ? t('error.mutation') : 'Loading reminders'}
+      </main>
+    );
   }
 
   const editingReminder =
@@ -63,6 +67,14 @@ export function RemindersApp(): React.JSX.Element {
       />
 
       <section className="matrix-pane" aria-label="Priority matrix">
+        {controller.mutationError ? (
+          <div className="mutation-banner" role="alert">
+            <span>{t('error.mutation')}</span>
+            <button type="button" onClick={controller.clearMutationError}>
+              {t('action.close')}
+            </button>
+          </div>
+        ) : null}
         <header className="matrix-titlebar">
           <div>
             <h1>{t('matrix.title')}</h1>
@@ -161,7 +173,7 @@ export function RemindersApp(): React.JSX.Element {
 
       <PriorityRail
         snapshot={controller.snapshot}
-        matrixGroups={controller.matrixGroups}
+        visibleReminders={controller.visibleReminders}
         selectedReminder={controller.selectedReminder}
         t={t}
         onOpenDetails={setEditingReminderId}
@@ -179,6 +191,8 @@ export function RemindersApp(): React.JSX.Element {
         }}
         onTitleChange={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
         onNotesChange={(reminderId, notes) => controller.updateReminderById(reminderId, { notes })}
+        onDueChange={(reminderId, dueAt) => controller.updateReminderById(reminderId, { dueAt })}
+        onRemindChange={(reminderId, remindAt) => controller.updateReminderById(reminderId, { remindAt })}
       />
       {settingsOpen ? (
         <SettingsPanel
@@ -265,7 +279,7 @@ function MatrixQuadrant({
             }}
           >
             <input
-              aria-label={`${title} 새 미리알림`}
+              aria-label={`${title} ${t('matrix.create')}`}
               placeholder={t('matrix.create')}
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
@@ -306,14 +320,14 @@ function MatrixReminderRow({
         event.dataTransfer.setData(REMINDER_DRAG_MIME, reminder.id);
       }}
     >
-      <button type="button" className="row-check" onClick={() => void onToggle(reminder.id)}>
+      <button type="button" className="row-check" aria-label={t(`status.${done ? 'open' : 'done'}` as TranslationKey)} onClick={() => void onToggle(reminder.id)}>
         <CheckCircle size={18} weight={done ? 'fill' : 'regular'} />
       </button>
       <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
         <span>{reminder.title}</span>
         <small>{subtitleForReminder(reminder, t)}</small>
       </button>
-      <button type="button" className="row-detail-button" aria-label="상세 열기" onClick={() => onOpenDetails(reminder.id)}>
+      <button type="button" className="row-detail-button" aria-label={t('popover.title')} onClick={() => onOpenDetails(reminder.id)}>
         <DotsThree size={18} weight="bold" />
       </button>
       {reminder.priority === 'high' ? <Flag className="row-flag" size={15} weight="fill" /> : null}

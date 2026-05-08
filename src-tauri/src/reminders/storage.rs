@@ -112,7 +112,7 @@ pub fn save_snapshot(app: &AppHandle, snapshot: &ReminderSnapshot) -> ReminderRe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reminders::domain::ReminderSnapshot;
+    use crate::reminders::domain::{Reminder, ReminderPriority, ReminderSnapshot, ReminderStatus};
     use tempfile::tempdir;
 
     #[test]
@@ -122,7 +122,7 @@ mod tests {
             .load_snapshot()
             .expect("missing file should load seed");
 
-        assert_eq!(snapshot.reminders[0].id, "r-focus");
+        assert!(snapshot.reminders.is_empty());
     }
 
     #[test]
@@ -163,7 +163,20 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let path = dir.path().join(REMINDERS_FILE);
         let mut invalid: ReminderSnapshot = seed_snapshot();
-        invalid.reminders[0].list_id = "missing".into();
+        invalid.reminders.push(Reminder {
+            id: "r-invalid".into(),
+            title: "Invalid".into(),
+            notes: String::new(),
+            list_id: "missing".into(),
+            status: ReminderStatus::Open,
+            priority: ReminderPriority::Normal,
+            due_at: None,
+            remind_at: None,
+            linked_instance: None,
+            subtasks: vec![],
+            created_at: "2026-05-08T02:08:00.000Z".into(),
+            updated_at: "2026-05-08T02:08:00.000Z".into(),
+        });
         fs::write(
             &path,
             serde_json::to_string_pretty(&invalid).expect("serialize invalid"),

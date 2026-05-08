@@ -121,11 +121,30 @@ export function loadBrowserSnapshot(): ReminderSnapshot {
       return seedSnapshot;
     }
 
-    return JSON.parse(raw) as ReminderSnapshot;
+    const parsed: unknown = JSON.parse(raw);
+    if (isReminderSnapshot(parsed)) {
+      return parsed;
+    }
+    console.error('[reminders] ignored malformed browser snapshot');
+    return seedSnapshot;
   } catch (error) {
     console.error('[reminders] failed to load browser snapshot', error);
     return seedSnapshot;
   }
+}
+
+function isReminderSnapshot(value: unknown): value is ReminderSnapshot {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as Partial<ReminderSnapshot>;
+  return (
+    candidate.schemaVersion === 1 &&
+    Array.isArray(candidate.lists) &&
+    Array.isArray(candidate.reminders) &&
+    typeof candidate.selectedViewId === 'string' &&
+    (typeof candidate.selectedReminderId === 'string' || candidate.selectedReminderId === null)
+  );
 }
 
 export function saveBrowserSnapshot(snapshot: ReminderSnapshot): void {

@@ -6,7 +6,7 @@ import {
   shouldApplyMatrixBucketMove,
   type MatrixBucket,
 } from './reminder.matrix';
-import { seedSnapshot } from './reminder.fixtures';
+import { demoSnapshot } from './reminder.fixtures';
 import { addReminderWithInput } from './reminder.store';
 
 describe('reminder matrix mapping', () => {
@@ -38,7 +38,7 @@ describe('reminder matrix mapping', () => {
 
     for (const bucket of buckets) {
       const next = addReminderWithInput(
-        seedSnapshot,
+        demoSnapshot,
         matrixBucketToCreateInput(bucket, `${bucket} test`),
       );
 
@@ -48,7 +48,7 @@ describe('reminder matrix mapping', () => {
 
   it('classifies each active seed reminder into one matrix bucket', () => {
     expect(
-      seedSnapshot.reminders
+      demoSnapshot.reminders
         .filter((reminder) => reminder.status !== 'done')
         .map((reminder) => resolveReminderMatrixBucket(reminder)),
     ).toEqual(['urgentImportant', 'important', 'waiting']);
@@ -56,7 +56,7 @@ describe('reminder matrix mapping', () => {
 
   it('keeps focused reminders in urgentImportant even when list metadata is later', () => {
     const focusedLater = {
-      ...seedSnapshot.reminders[1]!,
+      ...demoSnapshot.reminders[1]!,
       listId: 'later',
       status: 'focused' as const,
       priority: 'low' as const,

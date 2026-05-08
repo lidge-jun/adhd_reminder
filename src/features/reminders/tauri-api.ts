@@ -6,7 +6,6 @@ import type {
   ReminderSnapshot,
   UpdateReminderInput,
 } from './reminder.schema';
-import { seedSnapshot } from './reminder.fixtures';
 import { loadBrowserSnapshot, saveBrowserSnapshot, toDataSnapshot } from './reminder.store';
 
 declare global {
@@ -28,12 +27,7 @@ export async function loadReminderData(): Promise<ReminderDataSnapshot> {
     return toDataSnapshot(loadBrowserSnapshot());
   }
 
-  try {
-    return await invoke<ReminderDataSnapshot>('load_reminders');
-  } catch (error) {
-    console.error('[reminders] tauri load failed', error);
-    return toDataSnapshot(seedSnapshot);
-  }
+  return invoke<ReminderDataSnapshot>('load_reminders');
 }
 
 export async function loadReminderSnapshot(): Promise<ReminderSnapshot> {

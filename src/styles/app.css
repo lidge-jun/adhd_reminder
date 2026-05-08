@@ -113,11 +113,39 @@
 }
 
 .matrix-pane {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr;
   min-width: 0;
   border-right: 1px solid var(--border);
   background: #fff;
+}
+
+.mutation-banner {
+  position: absolute;
+  top: 12px;
+  left: 24px;
+  right: 24px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--danger) 8%, #fff);
+  color: var(--danger);
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.mutation-banner button {
+  border: 0;
+  border-radius: 5px;
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
 }
 
 .matrix-titlebar {

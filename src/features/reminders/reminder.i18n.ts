@@ -29,6 +29,7 @@ export type TranslationKey =
   | 'rail.noFocus'
   | 'rail.next'
   | 'rail.cutoff'
+  | 'error.mutation'
   | 'settings.title'
   | 'settings.language'
   | 'settings.korean'
@@ -41,6 +42,7 @@ export type TranslationKey =
   | 'popover.none'
   | 'action.focus'
   | 'action.notify'
+  | 'action.testNotify'
   | 'action.delete'
   | 'action.close'
   | 'status.open'
@@ -81,6 +83,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'rail.noFocus': '집중 항목 없음',
     'rail.next': '다음 행동 3개',
     'rail.cutoff': '컷오프: 다음 행동 3개 밖의 일은 지금 화면에서 밀어둡니다.',
+    'error.mutation': '변경사항을 저장하지 못했습니다. 잠시 후 다시 시도하세요.',
     'settings.title': '설정',
     'settings.language': '언어',
     'settings.korean': '한국어',
@@ -93,6 +96,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'popover.none': '없음',
     'action.focus': '집중',
     'action.notify': '알림',
+    'action.testNotify': '테스트 알림',
     'action.delete': '삭제',
     'action.close': '닫기',
     'status.open': '열림',
@@ -132,6 +136,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'rail.noFocus': 'No focus item',
     'rail.next': 'Next 3 Actions',
     'rail.cutoff': 'Cutoff: keep everything outside the next 3 actions off this screen.',
+    'error.mutation': 'Could not save the change. Try again in a moment.',
     'settings.title': 'Settings',
     'settings.language': 'Language',
     'settings.korean': '한국어',
@@ -144,6 +149,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'popover.none': 'None',
     'action.focus': 'Focus',
     'action.notify': 'Notify',
+    'action.testNotify': 'Test notification',
     'action.delete': 'Delete',
     'action.close': 'Close',
     'status.open': 'Open',

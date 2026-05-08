@@ -21,6 +21,16 @@ Implemented the Rust-owned local reminders MVP and the selected CLI-JAW todo UX 
 - Simplified the right rail by removing duplicate matrix counts and keeping only focus/next actions/cutoff; rail rows support completion and detail buttons but no drag.
 - Added Korean/English UI i18n with a left-sidebar Settings button.
 - Added quiet center-axis direction labels for importance and urgency.
+- Applied GPT Pro hardening review items for the daily-use MVP surface:
+  - first-run data now starts blank instead of showing project-specific demo reminders;
+  - sidebar smart-view selection now filters the 2x2 matrix instead of leaving the matrix global;
+  - right rail next actions now use `nextActionLimit` plus due/remind/priority ordering;
+  - native load no longer silently falls back to TypeScript seed data on invoke failure;
+  - native mutations are serialized through one controller boundary and surface save failures in the UI;
+  - title/notes editing buffers locally and saves on blur instead of invoking native writes on every keystroke;
+  - due/remind fields are editable datetime inputs;
+  - settings and detail popovers have dialog semantics, Escape close, focus entry, and focus return;
+  - Tauri config now has a CSP, macOS-only bundle targets, narrowed notification capabilities, Node engines, and `rust-toolchain.toml`.
 
 ## Verified
 
@@ -32,3 +42,7 @@ Implemented the Rust-owned local reminders MVP and the selected CLI-JAW todo UX 
 - `cargo clippy -- -D warnings`
 - Browser render at `http://127.0.0.1:5173/`
 - Browser console check: no captured output
+- Hardening screenshots:
+  - `/Users/jun/.cli-jaw/screenshots/screenshot_1778199753347.png`
+  - `/Users/jun/.cli-jaw/screenshots/screenshot_1778199758513.png`
+  - `/Users/jun/.cli-jaw/screenshots/screenshot_1778199763096.png`

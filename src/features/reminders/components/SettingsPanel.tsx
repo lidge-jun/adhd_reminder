@@ -1,4 +1,5 @@
 import { X } from '@phosphor-icons/react';
+import { useEffect, useRef } from 'react';
 import type { ReminderLocale, ReminderTranslator } from '../reminder.i18n';
 
 type SettingsPanelProps = {
@@ -14,12 +15,34 @@ export function SettingsPanel({
   onLocaleChange,
   onClose,
 }: SettingsPanelProps): React.JSX.Element {
+  const panelRef = useRef<HTMLElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
   return (
     <div className="settings-scrim" role="presentation" onMouseDown={onClose}>
       <section
+        ref={panelRef}
         className="settings-panel"
+        role="dialog"
+        aria-modal="true"
         aria-label={t('settings.title')}
+        tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+          }
+        }}
       >
         <header>
           <h2>{t('settings.title')}</h2>

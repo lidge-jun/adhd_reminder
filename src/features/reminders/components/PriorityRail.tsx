@@ -1,11 +1,11 @@
 import { CheckCircle, Circle, ClockCountdown, DotsThree, ListChecks, Target } from '@phosphor-icons/react';
+import { appConfig } from '../../../../config/app.config';
 import type { Reminder, ReminderSnapshot } from '../reminder.schema';
 import type { ReminderTranslator, TranslationKey } from '../reminder.i18n';
-import type { MatrixGroups } from '../useReminderController';
 
 type PriorityRailProps = {
   snapshot: ReminderSnapshot;
-  matrixGroups: MatrixGroups;
+  visibleReminders: Reminder[];
   selectedReminder: Reminder | null;
   t: ReminderTranslator;
   onOpenDetails: (reminderId: string) => void;
@@ -14,18 +14,17 @@ type PriorityRailProps = {
 
 export function PriorityRail({
   snapshot,
+  visibleReminders,
   selectedReminder,
   t,
   onOpenDetails,
   onToggle,
 }: PriorityRailProps): React.JSX.Element {
   const focusReminder = snapshot.reminders.find((reminder) => reminder.status === 'focused') ?? null;
-  const nextActions = snapshot.reminders
-    .filter((reminder) => reminder.status === 'open')
-    .slice(0, 3);
+  const nextActions = rankNextActions(visibleReminders, focusReminder?.id ?? null);
 
   return (
-    <aside className="priority-rail" aria-label="우선순위 요약">
+    <aside className="priority-rail" aria-label={t('rail.title')}>
       <header>
         <span>{t('rail.kicker')}</span>
         <h2>{t('rail.title')}</h2>
@@ -93,16 +92,50 @@ function RailReminderRow({
 
   return (
     <article className={`rail-reminder-row ${selected ? 'is-active' : ''}`}>
-      <button type="button" className="row-check" onClick={() => void onToggle(reminder.id)}>
+      <button type="button" className="row-check" aria-label={t(`status.${done ? 'open' : 'done'}` as TranslationKey)} onClick={() => void onToggle(reminder.id)}>
         {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} />}
       </button>
       <button type="button" className="rail-reminder-body" onClick={() => onOpenDetails(reminder.id)}>
         <strong>{reminder.title}</strong>
         <small>{t(`priority.${reminder.priority}` as TranslationKey)}</small>
       </button>
-      <button type="button" className="row-detail-button" aria-label="상세 열기" onClick={() => onOpenDetails(reminder.id)}>
+      <button type="button" className="row-detail-button" aria-label={t('popover.title')} onClick={() => onOpenDetails(reminder.id)}>
         <DotsThree size={18} weight="bold" />
       </button>
     </article>
   );
+}
+
+function rankNextActions(reminders: Reminder[], focusReminderId: string | null): Reminder[] {
+  return reminders
+    .filter((reminder) => reminder.status === 'open' && reminder.id !== focusReminderId)
+    .sort(compareNextAction)
+    .slice(0, appConfig.nextActionLimit);
+}
+
+function compareNextAction(left: Reminder, right: Reminder): number {
+  return (
+    nextTimeScore(left) - nextTimeScore(right) ||
+    priorityScore(left) - priorityScore(right) ||
+    Date.parse(left.createdAt) - Date.parse(right.createdAt)
+  );
+}
+
+function nextTimeScore(reminder: Reminder): number {
+  const candidates = [reminder.remindAt, reminder.dueAt]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => Date.parse(value))
+    .filter((value) => Number.isFinite(value));
+
+  return candidates.length > 0 ? Math.min(...candidates) : Number.MAX_SAFE_INTEGER;
+}
+
+function priorityScore(reminder: Reminder): number {
+  if (reminder.priority === 'high') {
+    return 0;
+  }
+  if (reminder.priority === 'normal') {
+    return 1;
+  }
+  return 2;
 }

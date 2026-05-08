@@ -111,6 +111,15 @@
   padding: 0 16px;
 }
 
+.popover-field input {
+  width: min(240px, 48%);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fff;
+  color: var(--ink);
+}
+
 .reminder-popover header button,
 .settings-panel header button {
   display: grid;
@@ -166,6 +175,15 @@
 
 .danger-action {
   color: var(--danger) !important;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.reminder-popover:focus-visible,
+.settings-panel:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, #fff);
+  outline-offset: 2px;
 }
 
 .segmented-control {
