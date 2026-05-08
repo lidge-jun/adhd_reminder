@@ -5,6 +5,7 @@ import {
   CircleDashed,
   ListChecks,
   GearSix,
+  SquaresFour,
   Target,
 } from '@phosphor-icons/react';
 import type { ReminderList, ReminderSnapshot, ReminderViewId, SmartListId } from '../reminder.schema';
@@ -45,6 +46,15 @@ export function Sidebar({
       </div>
 
       <nav className="smart-list-nav" aria-label="Smart lists">
+        <button
+          className={cn('smart-list-button', 'is-hero', snapshot.selectedViewId === 'matrix' && 'is-active')}
+          type="button"
+          onClick={() => onSelectView('matrix')}
+        >
+          <SquaresFour size={17} />
+          <span>{t('nav.matrix')}</span>
+          <strong>{snapshot.reminders.filter((reminder) => reminder.status !== 'done').length}</strong>
+        </button>
         {smartLists.map((item) => {
           const Icon = item.icon;
           const count = countForSmartList(snapshot, item.id);

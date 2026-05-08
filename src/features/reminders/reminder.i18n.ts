@@ -4,6 +4,7 @@ export type TranslationKey =
   | 'app.title'
   | 'app.localBrowser'
   | 'app.localMac'
+  | 'nav.matrix'
   | 'nav.today'
   | 'nav.focus'
   | 'nav.waiting'
@@ -58,6 +59,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'app.title': '미리알림',
     'app.localBrowser': '로컬 브라우저',
     'app.localMac': '이 Mac',
+    'nav.matrix': '우선순위 매트릭스',
     'nav.today': '오늘',
     'nav.focus': '집중',
     'nav.waiting': '대기',
@@ -111,6 +113,7 @@ const messages: Record<ReminderLocale, Record<TranslationKey, string>> = {
     'app.title': 'Reminders',
     'app.localBrowser': 'Local Browser',
     'app.localMac': 'This Mac',
+    'nav.matrix': 'Priority Matrix',
     'nav.today': 'Today',
     'nav.focus': 'Focus',
     'nav.waiting': 'Waiting',

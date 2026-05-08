@@ -54,7 +54,7 @@ export function mergeSnapshot(
 
 export function createInitialView(data: ReminderDataSnapshot): ReminderViewState {
   return {
-    selectedViewId: 'today',
+    selectedViewId: 'matrix',
     selectedReminderId: data.reminders[0]?.id ?? null,
   };
 }
@@ -168,29 +168,39 @@ function updateReminder(
   };
 }
 
-export function getVisibleReminders(snapshot: ReminderSnapshot, viewId = snapshot.selectedViewId): Reminder[] {
+export function selectRemindersForView(
+  reminders: Reminder[],
+  viewId: ReminderViewId,
+): Reminder[] {
+  if (viewId === 'matrix') {
+    return reminders.filter((reminder) => reminder.status !== 'done');
+  }
   if (viewId === 'done') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'done');
+    return reminders.filter((reminder) => reminder.status === 'done');
   }
   if (viewId === 'focus') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'focused');
+    return reminders.filter((reminder) => reminder.status === 'focused');
   }
   if (viewId === 'waiting') {
-    return snapshot.reminders.filter((reminder) => reminder.status === 'waiting');
+    return reminders.filter((reminder) => reminder.status === 'waiting');
   }
   if (viewId === 'later') {
-    return snapshot.reminders.filter(
+    return reminders.filter(
       (reminder) => reminder.listId === 'later' && reminder.status !== 'done',
     );
   }
   if (viewId === 'today') {
-    return snapshot.reminders.filter(
+    return reminders.filter(
       (reminder) => reminder.listId === 'today' && reminder.status !== 'done',
     );
   }
 
   const listId = viewId.slice('list:'.length);
-  return snapshot.reminders.filter((reminder) => reminder.listId === listId);
+  return reminders.filter((reminder) => reminder.listId === listId);
+}
+
+export function getVisibleReminders(snapshot: ReminderSnapshot, viewId = snapshot.selectedViewId): Reminder[] {
+  return selectRemindersForView(snapshot.reminders, viewId);
 }
 
 export function setSingleFocus(snapshot: ReminderSnapshot, reminderId: string): ReminderSnapshot {

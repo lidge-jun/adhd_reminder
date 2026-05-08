@@ -1,7 +1,7 @@
 export type ReminderStatus = 'open' | 'focused' | 'waiting' | 'done';
 export type ReminderPriority = 'low' | 'normal' | 'high';
 export type SmartListId = 'today' | 'focus' | 'waiting' | 'later' | 'done';
-export type ReminderViewId = SmartListId | `list:${string}`;
+export type ReminderViewId = 'matrix' | SmartListId | `list:${string}`;
 
 export type ReminderList = {
   id: string;

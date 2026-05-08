@@ -4,6 +4,7 @@ import { PriorityRail } from './components/PriorityRail';
 import { ReminderEditorPopover } from './components/ReminderEditorPopover';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Sidebar } from './components/Sidebar';
+import { SingleListView } from './components/SingleListView';
 import {
   createReminderTranslator,
   type ReminderLocale,
@@ -11,7 +12,7 @@ import {
   type TranslationKey,
 } from './reminder.i18n';
 import type { MatrixBucket } from './reminder.matrix';
-import type { Reminder } from './reminder.schema';
+import type { Reminder, SmartListId } from './reminder.schema';
 import { useReminderController, type MatrixGroups } from './useReminderController';
 
 const REMINDER_DRAG_MIME = 'application/x-jaw-reminder-id';
@@ -38,8 +39,10 @@ export function RemindersApp(): React.JSX.Element {
     );
   }
 
+  const snapshot = controller.snapshot;
   const editingReminder =
-    controller.snapshot.reminders.find((reminder) => reminder.id === editingReminderId) ?? null;
+    snapshot.reminders.find((reminder) => reminder.id === editingReminderId) ?? null;
+  const currentViewId = snapshot.selectedViewId;
 
   return (
     <main
@@ -77,98 +80,116 @@ export function RemindersApp(): React.JSX.Element {
         ) : null}
         <header className="matrix-titlebar">
           <div>
-            <h1>{t('matrix.title')}</h1>
-            <p>{controller.snapshot.reminders.length}{t('matrix.items')}</p>
+            <h1>{titleForView(currentViewId, t)}</h1>
+            <p>{snapshot.reminders.length}{t('matrix.items')}</p>
           </div>
           <span>{controller.isNative ? t('matrix.rustStore') : t('matrix.browserStore')}</span>
         </header>
 
-        <div className="matrix-board">
-          <div className="matrix-axis matrix-axis-y">
-            <span>{t('matrix.importance')}</span>
-            <b>↑</b>
+        {currentViewId === 'matrix' ? (
+          <div className="matrix-board">
+            <div className="matrix-axis matrix-axis-y" aria-hidden="true">
+              <b>↑</b>
+              <span>{t('matrix.importance')}</span>
+            </div>
+            <div className="matrix-axis matrix-axis-x" aria-hidden="true">
+              <b>←</b>
+              <span>{t('matrix.urgency')}</span>
+            </div>
+            <MatrixQuadrant
+              bucket="urgentImportant"
+              title={t('matrix.urgentImportant')}
+              tone="red"
+              count={controller.matrixGroups.urgentImportant.length}
+              reminders={controller.matrixGroups.urgentImportant}
+              selectedReminderId={controller.snapshot.selectedReminderId}
+              t={t}
+              onSelect={controller.selectReminder}
+              onOpenDetails={setEditingReminderId}
+              onToggle={controller.toggleDone}
+              draft={bucketDrafts.urgentImportant}
+              onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: value }))}
+              onAdd={async () => {
+                await controller.addReminderToBucket('urgentImportant', bucketDrafts.urgentImportant);
+                setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: '' }));
+              }}
+              onDropReminder={controller.moveReminderToBucket}
+            />
+            <MatrixQuadrant
+              bucket="important"
+              title={t('matrix.important')}
+              tone="green"
+              count={controller.matrixGroups.important.length}
+              reminders={controller.matrixGroups.important}
+              selectedReminderId={controller.snapshot.selectedReminderId}
+              t={t}
+              onSelect={controller.selectReminder}
+              onOpenDetails={setEditingReminderId}
+              onToggle={controller.toggleDone}
+              draft={bucketDrafts.important}
+              onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, important: value }))}
+              onAdd={async () => {
+                await controller.addReminderToBucket('important', bucketDrafts.important);
+                setBucketDrafts((drafts) => ({ ...drafts, important: '' }));
+              }}
+              onDropReminder={controller.moveReminderToBucket}
+            />
+            <MatrixQuadrant
+              bucket="waiting"
+              title={t('matrix.waiting')}
+              tone="amber"
+              count={controller.matrixGroups.waiting.length}
+              reminders={controller.matrixGroups.waiting}
+              selectedReminderId={controller.snapshot.selectedReminderId}
+              t={t}
+              onSelect={controller.selectReminder}
+              onOpenDetails={setEditingReminderId}
+              onToggle={controller.toggleDone}
+              draft={bucketDrafts.waiting}
+              onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, waiting: value }))}
+              onAdd={async () => {
+                await controller.addReminderToBucket('waiting', bucketDrafts.waiting);
+                setBucketDrafts((drafts) => ({ ...drafts, waiting: '' }));
+              }}
+              onDropReminder={controller.moveReminderToBucket}
+            />
+            <MatrixQuadrant
+              bucket="later"
+              title={t('matrix.later')}
+              tone="blue"
+              count={controller.matrixGroups.later.length}
+              reminders={controller.matrixGroups.later}
+              selectedReminderId={controller.snapshot.selectedReminderId}
+              t={t}
+              onSelect={controller.selectReminder}
+              onOpenDetails={setEditingReminderId}
+              onToggle={controller.toggleDone}
+              draft={bucketDrafts.later}
+              onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, later: value }))}
+              onAdd={async () => {
+                await controller.addReminderToBucket('later', bucketDrafts.later);
+                setBucketDrafts((drafts) => ({ ...drafts, later: '' }));
+              }}
+              onDropReminder={controller.moveReminderToBucket}
+            />
           </div>
-          <div className="matrix-axis matrix-axis-x">
-            <span>{t('matrix.urgency')}</span>
-            <b>→</b>
-          </div>
-          <MatrixQuadrant
-            bucket="urgentImportant"
-            title={t('matrix.urgentImportant')}
-            tone="red"
-            count={controller.matrixGroups.urgentImportant.length}
-            reminders={controller.matrixGroups.urgentImportant}
-            selectedReminderId={controller.snapshot.selectedReminderId}
+        ) : (
+          <SingleListView
+            viewId={asSmartListId(currentViewId)}
+            reminders={controller.visibleReminders}
+            selectedReminderId={snapshot.selectedReminderId}
             t={t}
+            draft={singleListDraftFor(currentViewId, bucketDrafts)}
+            onDraftChange={(value) => updateBucketDraft(currentViewId, value, setBucketDrafts)}
+            onAdd={async (bucket, title) => {
+              await controller.addReminderToBucket(bucket, title);
+              clearBucketDraftFor(bucket, setBucketDrafts);
+            }}
             onSelect={controller.selectReminder}
             onOpenDetails={setEditingReminderId}
             onToggle={controller.toggleDone}
-            draft={bucketDrafts.urgentImportant}
-            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: value }))}
-            onAdd={async () => {
-              await controller.addReminderToBucket('urgentImportant', bucketDrafts.urgentImportant);
-              setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: '' }));
-            }}
-            onDropReminder={controller.moveReminderToBucket}
           />
-          <MatrixQuadrant
-            bucket="important"
-            title={t('matrix.important')}
-            tone="green"
-            count={controller.matrixGroups.important.length}
-            reminders={controller.matrixGroups.important}
-            selectedReminderId={controller.snapshot.selectedReminderId}
-            t={t}
-            onSelect={controller.selectReminder}
-            onOpenDetails={setEditingReminderId}
-            onToggle={controller.toggleDone}
-            draft={bucketDrafts.important}
-            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, important: value }))}
-            onAdd={async () => {
-              await controller.addReminderToBucket('important', bucketDrafts.important);
-              setBucketDrafts((drafts) => ({ ...drafts, important: '' }));
-            }}
-            onDropReminder={controller.moveReminderToBucket}
-          />
-          <MatrixQuadrant
-            bucket="waiting"
-            title={t('matrix.waiting')}
-            tone="amber"
-            count={controller.matrixGroups.waiting.length}
-            reminders={controller.matrixGroups.waiting}
-            selectedReminderId={controller.snapshot.selectedReminderId}
-            t={t}
-            onSelect={controller.selectReminder}
-            onOpenDetails={setEditingReminderId}
-            onToggle={controller.toggleDone}
-            draft={bucketDrafts.waiting}
-            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, waiting: value }))}
-            onAdd={async () => {
-              await controller.addReminderToBucket('waiting', bucketDrafts.waiting);
-              setBucketDrafts((drafts) => ({ ...drafts, waiting: '' }));
-            }}
-            onDropReminder={controller.moveReminderToBucket}
-          />
-          <MatrixQuadrant
-            bucket="later"
-            title={t('matrix.later')}
-            tone="blue"
-            count={controller.matrixGroups.later.length}
-            reminders={controller.matrixGroups.later}
-            selectedReminderId={controller.snapshot.selectedReminderId}
-            t={t}
-            onSelect={controller.selectReminder}
-            onOpenDetails={setEditingReminderId}
-            onToggle={controller.toggleDone}
-            draft={bucketDrafts.later}
-            onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, later: value }))}
-            onAdd={async () => {
-              await controller.addReminderToBucket('later', bucketDrafts.later);
-              setBucketDrafts((drafts) => ({ ...drafts, later: '' }));
-            }}
-            onDropReminder={controller.moveReminderToBucket}
-          />
-        </div>
+        )}
       </section>
 
       <PriorityRail
@@ -321,7 +342,7 @@ function MatrixReminderRow({
       }}
     >
       <button type="button" className="row-check" aria-label={t(`status.${done ? 'open' : 'done'}` as TranslationKey)} onClick={() => void onToggle(reminder.id)}>
-        <CheckCircle size={18} weight={done ? 'fill' : 'regular'} />
+        {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} weight="regular" />}
       </button>
       <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
         <span>{reminder.title}</span>
@@ -349,4 +370,64 @@ function subtitleForReminder(reminder: Reminder, t: ReminderTranslator): string 
 function loadLocale(): ReminderLocale {
   const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   return saved === 'en' ? 'en' : 'ko';
+}
+
+const SMART_LIST_TITLE_KEY: Record<SmartListId, TranslationKey> = {
+  today: 'matrix.urgentImportant',
+  focus: 'matrix.important',
+  waiting: 'matrix.waiting',
+  later: 'matrix.later',
+  done: 'nav.done',
+};
+
+const SMART_LIST_BUCKET: Record<Exclude<SmartListId, 'done'>, MatrixBucket> = {
+  today: 'urgentImportant',
+  focus: 'important',
+  waiting: 'waiting',
+  later: 'later',
+};
+
+function titleForView(viewId: string, t: ReminderTranslator): string {
+  if (viewId === 'matrix') {
+    return t('matrix.title');
+  }
+  if (viewId in SMART_LIST_TITLE_KEY) {
+    return t(SMART_LIST_TITLE_KEY[viewId as SmartListId]);
+  }
+  return t('matrix.title');
+}
+
+function asSmartListId(viewId: string): SmartListId {
+  if (viewId === 'today' || viewId === 'focus' || viewId === 'waiting' || viewId === 'later' || viewId === 'done') {
+    return viewId;
+  }
+  return 'today';
+}
+
+function singleListDraftFor(viewId: string, drafts: Record<MatrixBucket, string>): string {
+  const smart = asSmartListId(viewId);
+  if (smart === 'done') {
+    return '';
+  }
+  return drafts[SMART_LIST_BUCKET[smart]];
+}
+
+function updateBucketDraft(
+  viewId: string,
+  value: string,
+  setDrafts: React.Dispatch<React.SetStateAction<Record<MatrixBucket, string>>>,
+): void {
+  const smart = asSmartListId(viewId);
+  if (smart === 'done') {
+    return;
+  }
+  const bucket = SMART_LIST_BUCKET[smart];
+  setDrafts((current) => ({ ...current, [bucket]: value }));
+}
+
+function clearBucketDraftFor(
+  bucket: MatrixBucket,
+  setDrafts: React.Dispatch<React.SetStateAction<Record<MatrixBucket, string>>>,
+): void {
+  setDrafts((current) => ({ ...current, [bucket]: '' }));
 }
