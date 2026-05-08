@@ -90,11 +90,11 @@ export function RemindersApp(): React.JSX.Element {
           <div className="matrix-board">
             <div className="matrix-axis matrix-axis-y" aria-hidden="true">
               <b>↑</b>
-              <span>{t('matrix.importance')}</span>
+              <span lang={locale}>{t('matrix.importance')}</span>
             </div>
             <div className="matrix-axis matrix-axis-x" aria-hidden="true">
               <b>←</b>
-              <span>{t('matrix.urgency')}</span>
+              <span lang={locale}>{t('matrix.urgency')}</span>
             </div>
             <MatrixQuadrant
               bucket="urgentImportant"

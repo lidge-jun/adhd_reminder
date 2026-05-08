@@ -251,13 +251,22 @@
 
 .matrix-axis-y span {
   display: block;
-  width: 1em;
   padding: 6px 4px;
   background: #fff;
-  text-align: center;
   line-height: 1.25;
+  text-align: center;
+}
+
+.matrix-axis-y span:lang(ko) {
+  width: 1em;
   word-break: break-all;
   white-space: normal;
+}
+
+.matrix-axis-y span:lang(en) {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.04em;
 }
 
 .matrix-axis-x {
