@@ -1,5 +1,6 @@
-import { CheckCircle, Circle, DotsThree, Flag } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
+import { DragPreviewOverlay } from './components/DragPreviewOverlay';
+import { MatrixQuadrant } from './components/MatrixQuadrant';
 import { PriorityRail } from './components/PriorityRail';
 import { ReminderEditorPopover } from './components/ReminderEditorPopover';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -12,10 +13,10 @@ import {
   type TranslationKey,
 } from './reminder.i18n';
 import type { MatrixBucket } from './reminder.matrix';
-import type { Reminder, SmartListId } from './reminder.schema';
-import { useReminderController, type MatrixGroups } from './useReminderController';
+import type { SmartListId, UpdateReminderInput } from './reminder.schema';
+import { useReminderController } from './useReminderController';
+import { useReminderDrag, type ReminderDropTarget } from './useReminderDrag';
 
-const REMINDER_DRAG_MIME = 'application/x-jaw-reminder-id';
 const LOCALE_STORAGE_KEY = 'jaw-reminders.locale';
 const ZOOM_STORAGE_KEY = 'jaw-reminders.zoom';
 const ZOOM_MIN = 0.6;
@@ -28,6 +29,7 @@ export function RemindersApp(): React.JSX.Element {
   const [zoom, setZoom] = useState<number>(() => loadZoom());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const t = useMemo(() => createReminderTranslator(locale), [locale]);
+  const reminderDrag = useReminderDrag({ onDrop: moveReminderToDropTarget });
 
   useEffect(() => {
     document.documentElement.style.zoom = String(zoom);
@@ -53,6 +55,7 @@ export function RemindersApp(): React.JSX.Element {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
   const [bucketDrafts, setBucketDrafts] = useState<Record<MatrixBucket, string>>({
     urgentImportant: '',
     important: '',
@@ -73,6 +76,21 @@ export function RemindersApp(): React.JSX.Element {
   const editingReminder =
     snapshot.reminders.find((reminder) => reminder.id === editingReminderId) ?? null;
   const currentViewId = snapshot.selectedViewId;
+
+  async function moveReminderToDropTarget(
+    reminderId: string,
+    target: ReminderDropTarget,
+  ): Promise<void> {
+    if (target.kind === 'bucket') {
+      await controller.moveReminderToBucket(reminderId, target.bucket);
+      return;
+    }
+    if (target.kind === 'done') {
+      await controller.updateReminderById(reminderId, { status: 'done' });
+      return;
+    }
+    await controller.updateReminderById(reminderId, inputForListDrop(target.listId));
+  }
 
   return (
     <main
@@ -95,6 +113,7 @@ export function RemindersApp(): React.JSX.Element {
         snapshot={controller.snapshot}
         isNative={controller.isNative}
         t={t}
+        dragActive={reminderDrag.dragActive}
         onSelectView={controller.selectViewId}
         onOpenSettings={() => setSettingsOpen(true)}
       />
@@ -128,10 +147,12 @@ export function RemindersApp(): React.JSX.Element {
             </div>
             <MatrixQuadrant
               bucket="urgentImportant"
+              dragActive={reminderDrag.dragActive}
               title={t('matrix.urgentImportant')}
               tone="red"
               count={controller.matrixGroups.urgentImportant.length}
               reminders={controller.matrixGroups.urgentImportant}
+              locale={locale}
               selectedReminderId={controller.snapshot.selectedReminderId}
               t={t}
               onSelect={controller.selectReminder}
@@ -143,14 +164,16 @@ export function RemindersApp(): React.JSX.Element {
                 await controller.addReminderToBucket('urgentImportant', bucketDrafts.urgentImportant);
                 setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: '' }));
               }}
-              onDropReminder={controller.moveReminderToBucket}
+              onPointerReminderStart={reminderDrag.startReminderDrag}
             />
             <MatrixQuadrant
               bucket="important"
+              dragActive={reminderDrag.dragActive}
               title={t('matrix.important')}
               tone="green"
               count={controller.matrixGroups.important.length}
               reminders={controller.matrixGroups.important}
+              locale={locale}
               selectedReminderId={controller.snapshot.selectedReminderId}
               t={t}
               onSelect={controller.selectReminder}
@@ -162,14 +185,16 @@ export function RemindersApp(): React.JSX.Element {
                 await controller.addReminderToBucket('important', bucketDrafts.important);
                 setBucketDrafts((drafts) => ({ ...drafts, important: '' }));
               }}
-              onDropReminder={controller.moveReminderToBucket}
+              onPointerReminderStart={reminderDrag.startReminderDrag}
             />
             <MatrixQuadrant
               bucket="waiting"
+              dragActive={reminderDrag.dragActive}
               title={t('matrix.waiting')}
               tone="amber"
               count={controller.matrixGroups.waiting.length}
               reminders={controller.matrixGroups.waiting}
+              locale={locale}
               selectedReminderId={controller.snapshot.selectedReminderId}
               t={t}
               onSelect={controller.selectReminder}
@@ -181,14 +206,16 @@ export function RemindersApp(): React.JSX.Element {
                 await controller.addReminderToBucket('waiting', bucketDrafts.waiting);
                 setBucketDrafts((drafts) => ({ ...drafts, waiting: '' }));
               }}
-              onDropReminder={controller.moveReminderToBucket}
+              onPointerReminderStart={reminderDrag.startReminderDrag}
             />
             <MatrixQuadrant
               bucket="later"
+              dragActive={reminderDrag.dragActive}
               title={t('matrix.later')}
               tone="blue"
               count={controller.matrixGroups.later.length}
               reminders={controller.matrixGroups.later}
+              locale={locale}
               selectedReminderId={controller.snapshot.selectedReminderId}
               t={t}
               onSelect={controller.selectReminder}
@@ -200,13 +227,14 @@ export function RemindersApp(): React.JSX.Element {
                 await controller.addReminderToBucket('later', bucketDrafts.later);
                 setBucketDrafts((drafts) => ({ ...drafts, later: '' }));
               }}
-              onDropReminder={controller.moveReminderToBucket}
+              onPointerReminderStart={reminderDrag.startReminderDrag}
             />
           </div>
         ) : (
           <SingleListView
             viewId={asSmartListId(currentViewId)}
             reminders={controller.visibleReminders}
+            locale={locale}
             selectedReminderId={snapshot.selectedReminderId}
             t={t}
             draft={singleListDraftFor(currentViewId, bucketDrafts)}
@@ -245,6 +273,13 @@ export function RemindersApp(): React.JSX.Element {
         onDueChange={(reminderId, dueAt) => controller.updateReminderById(reminderId, { dueAt })}
         onRemindChange={(reminderId, remindAt) => controller.updateReminderById(reminderId, { remindAt })}
       />
+      {reminderDrag.dragPreview ? (
+        <DragPreviewOverlay
+          title={reminderDrag.dragPreview.title}
+          x={reminderDrag.dragPreview.x}
+          y={reminderDrag.dragPreview.y}
+        />
+      ) : null}
       {settingsOpen ? (
         <SettingsPanel
           locale={locale}
@@ -262,143 +297,6 @@ export function RemindersApp(): React.JSX.Element {
       ) : null}
     </main>
   );
-}
-
-type MatrixQuadrantProps = {
-  bucket: MatrixBucket;
-  title: string;
-  tone: 'red' | 'green' | 'amber' | 'blue';
-  count: number;
-  reminders: MatrixGroups[keyof MatrixGroups];
-  selectedReminderId: string | null;
-  t: ReminderTranslator;
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onAdd: () => Promise<void>;
-  onSelect: (reminderId: string) => void;
-  onOpenDetails: (reminderId: string) => void;
-  onToggle: (reminderId: string) => Promise<void>;
-  onDropReminder: (reminderId: string, bucket: MatrixBucket) => Promise<void>;
-};
-
-function MatrixQuadrant({
-  bucket,
-  title,
-  tone,
-  count,
-  reminders,
-  selectedReminderId,
-  t,
-  draft,
-  onDraftChange,
-  onAdd,
-  onSelect,
-  onOpenDetails,
-  onToggle,
-  onDropReminder,
-}: MatrixQuadrantProps): React.JSX.Element {
-  return (
-    <section
-      className={`matrix-quadrant tone-${tone}`}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const reminderId = event.dataTransfer.getData(REMINDER_DRAG_MIME);
-        if (reminderId) {
-          void onDropReminder(reminderId, bucket);
-        }
-      }}
-    >
-      <header>
-        <h2>{title}</h2>
-        <span>{count}</span>
-      </header>
-      <ul>
-        {reminders.map((reminder) => (
-          <MatrixReminderRow
-            key={reminder.id}
-            reminder={reminder}
-            selected={selectedReminderId === reminder.id}
-            t={t}
-            onSelect={onSelect}
-            onOpenDetails={onOpenDetails}
-            onToggle={onToggle}
-          />
-        ))}
-        <li className="matrix-inline-create">
-          <Circle size={16} />
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void onAdd();
-            }}
-          >
-            <input
-              aria-label={`${title} ${t('matrix.create')}`}
-              placeholder={t('matrix.create')}
-              value={draft}
-              onChange={(event) => onDraftChange(event.target.value)}
-            />
-          </form>
-        </li>
-        {reminders.length === 0 ? <li className="matrix-empty">{t('matrix.empty')}</li> : null}
-      </ul>
-    </section>
-  );
-}
-
-type MatrixReminderRowProps = {
-  reminder: Reminder;
-  selected: boolean;
-  t: ReminderTranslator;
-  onSelect: (reminderId: string) => void;
-  onOpenDetails: (reminderId: string) => void;
-  onToggle: (reminderId: string) => Promise<void>;
-};
-
-function MatrixReminderRow({
-  reminder,
-  selected,
-  t,
-  onSelect,
-  onOpenDetails,
-  onToggle,
-}: MatrixReminderRowProps): React.JSX.Element {
-  const done = reminder.status === 'done';
-
-  return (
-    <li
-      className={`matrix-reminder-row ${selected ? 'is-selected' : ''} ${done ? 'is-done' : ''}`}
-      draggable
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData(REMINDER_DRAG_MIME, reminder.id);
-      }}
-    >
-      <button type="button" className="row-check" aria-label={t(`status.${done ? 'open' : 'done'}` as TranslationKey)} onClick={() => void onToggle(reminder.id)}>
-        {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} weight="regular" />}
-      </button>
-      <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
-        <span>{reminder.title}</span>
-        <small>{subtitleForReminder(reminder, t)}</small>
-      </button>
-      <button type="button" className="row-detail-button" aria-label={t('popover.title')} onClick={() => onOpenDetails(reminder.id)}>
-        <DotsThree size={18} weight="bold" />
-      </button>
-      {reminder.priority === 'high' ? <Flag className="row-flag" size={15} weight="fill" /> : null}
-    </li>
-  );
-}
-
-function subtitleForReminder(reminder: Reminder, t: ReminderTranslator): string {
-  const parts: string[] = [
-    t(`status.${reminder.status}` as TranslationKey),
-    t(`priority.${reminder.priority}` as TranslationKey),
-  ];
-  if (reminder.linkedInstance) {
-    parts.push(reminder.linkedInstance);
-  }
-  return parts.join(' · ');
 }
 
 function loadLocale(): ReminderLocale {
@@ -482,4 +380,17 @@ function clearBucketDraftFor(
   setDrafts: React.Dispatch<React.SetStateAction<Record<MatrixBucket, string>>>,
 ): void {
   setDrafts((current) => ({ ...current, [bucket]: '' }));
+}
+
+function inputForListDrop(listId: string): UpdateReminderInput {
+  if (listId === 'waiting') {
+    return { listId, status: 'waiting', priority: 'normal' };
+  }
+  if (listId === 'later') {
+    return { listId, status: 'open', priority: 'low' };
+  }
+  if (listId === 'focus') {
+    return { listId, status: 'open', priority: 'normal' };
+  }
+  return { listId, status: 'open' };
 }

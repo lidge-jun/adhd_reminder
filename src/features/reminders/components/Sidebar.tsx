@@ -8,6 +8,7 @@ import {
   SquaresFour,
   Target,
 } from '@phosphor-icons/react';
+import type { MatrixBucket } from '../reminder.matrix';
 import type { ReminderList, ReminderSnapshot, ReminderViewId, SmartListId } from '../reminder.schema';
 import type { ReminderTranslator } from '../reminder.i18n';
 import { selectRemindersForView } from '../reminder.store';
@@ -21,10 +22,18 @@ const SMART_LIST_TONE: Record<SmartListId, string> = {
   done: 'tone-grey',
 };
 
+const SMART_LIST_DROP_BUCKET: Partial<Record<SmartListId, MatrixBucket>> = {
+  today: 'urgentImportant',
+  focus: 'important',
+  waiting: 'waiting',
+  later: 'later',
+};
+
 type SidebarProps = {
   snapshot: ReminderSnapshot;
   isNative: boolean;
   t: ReminderTranslator;
+  dragActive: boolean;
   onSelectView: (viewId: ReminderViewId) => void;
   onOpenSettings: () => void;
 };
@@ -41,6 +50,7 @@ export function Sidebar({
   snapshot,
   isNative,
   t,
+  dragActive,
   onSelectView,
   onOpenSettings,
 }: SidebarProps): React.JSX.Element {
@@ -70,10 +80,16 @@ export function Sidebar({
 
           return (
             <button
-              className={cn('smart-list-button', SMART_LIST_TONE[item.id], snapshot.selectedViewId === item.id && 'is-active')}
+              className={cn(
+                'smart-list-button',
+                SMART_LIST_TONE[item.id],
+                snapshot.selectedViewId === item.id && 'is-active',
+                dragActive && 'is-drop-target',
+              )}
               key={item.id}
               type="button"
               onClick={() => onSelectView(item.id)}
+              {...smartListDropAttributes(item.id)}
             >
               <Icon size={17} />
               <span>{t(item.labelKey)}</span>
@@ -92,6 +108,7 @@ export function Sidebar({
                 key={list.id}
                 list={list}
                 active={snapshot.selectedViewId === `list:${list.id}`}
+                dragActive={dragActive}
                 count={snapshot.reminders.filter((reminder) => reminder.listId === list.id).length}
                 onSelectView={onSelectView}
               />
@@ -113,16 +130,18 @@ export function Sidebar({
 type UserListButtonProps = {
   list: ReminderList;
   active: boolean;
+  dragActive: boolean;
   count: number;
   onSelectView: (viewId: ReminderViewId) => void;
 };
 
-function UserListButton({ list, active, count, onSelectView }: UserListButtonProps): React.JSX.Element {
+function UserListButton({ list, active, dragActive, count, onSelectView }: UserListButtonProps): React.JSX.Element {
   return (
     <button
-      className={cn('user-list-button', active && 'is-active')}
+      className={cn('user-list-button', active && 'is-active', dragActive && 'is-drop-target')}
       type="button"
       onClick={() => onSelectView(`list:${list.id}`)}
+      data-reminder-drop-list-id={list.id}
     >
       <i style={{ '--list-accent': list.accent } as React.CSSProperties} />
       <span>{list.name}</span>
@@ -131,3 +150,12 @@ function UserListButton({ list, active, count, onSelectView }: UserListButtonPro
   );
 }
 
+function smartListDropAttributes(
+  smartListId: SmartListId,
+): Record<string, string> {
+  if (smartListId === 'done') {
+    return { 'data-reminder-drop-action': 'done' };
+  }
+  const bucket = SMART_LIST_DROP_BUCKET[smartListId];
+  return bucket ? { 'data-reminder-drop-bucket': bucket } : {};
+}
