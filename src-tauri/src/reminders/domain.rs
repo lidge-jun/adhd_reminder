@@ -39,7 +39,7 @@ pub struct ReminderSubtask {
     pub done: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Reminder {
     pub id: String,
@@ -48,6 +48,8 @@ pub struct Reminder {
     pub list_id: String,
     pub status: ReminderStatus,
     pub priority: ReminderPriority,
+    #[serde(default)]
+    pub manual_rank: Option<f64>,
     pub due_at: Option<String>,
     pub remind_at: Option<String>,
     pub linked_instance: Option<String>,
@@ -56,7 +58,7 @@ pub struct Reminder {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReminderSnapshot {
     pub schema_version: u32,
@@ -64,16 +66,18 @@ pub struct ReminderSnapshot {
     pub reminders: Vec<Reminder>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateReminderInput {
     pub title: String,
     pub list_id: String,
     pub initial_status: Option<ReminderStatus>,
     pub priority: Option<ReminderPriority>,
+    #[serde(default)]
+    pub manual_rank: Option<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateReminderInput {
     pub title: Option<String>,
@@ -81,6 +85,8 @@ pub struct UpdateReminderInput {
     pub list_id: Option<String>,
     pub status: Option<ReminderStatus>,
     pub priority: Option<ReminderPriority>,
+    #[serde(default, with = "double_option")]
+    pub manual_rank: Option<Option<f64>>,
     #[serde(default, with = "double_option")]
     pub due_at: Option<Option<String>>,
     #[serde(default, with = "double_option")]
@@ -134,6 +140,12 @@ pub fn validate_snapshot(snapshot: &ReminderSnapshot) -> ReminderResult<()> {
                 reminder.id
             )));
         }
+        if reminder.manual_rank.is_some_and(|rank| !rank.is_finite()) {
+            return Err(ReminderError::InvalidInput(format!(
+                "reminder {} manual rank must be finite",
+                reminder.id
+            )));
+        }
         if !reminder_ids.insert(reminder.id.as_str()) {
             return Err(ReminderError::InvalidInput(format!(
                 "duplicate reminder id {}",
@@ -178,6 +190,11 @@ pub fn validate_create_input(
             "focused reminders must be created through set_focus_reminder".into(),
         ));
     }
+    if input.manual_rank.is_some_and(|rank| !rank.is_finite()) {
+        return Err(ReminderError::InvalidInput(
+            "manual rank must be finite".into(),
+        ));
+    }
     Ok(())
 }
 
@@ -192,6 +209,15 @@ pub fn validate_update_input(input: &UpdateReminderInput) -> ReminderResult<()> 
     if matches!(input.status, Some(ReminderStatus::Focused)) {
         return Err(ReminderError::InvalidInput(
             "use set_focus_reminder to focus a reminder".into(),
+        ));
+    }
+    if input
+        .manual_rank
+        .flatten()
+        .is_some_and(|rank| !rank.is_finite())
+    {
+        return Err(ReminderError::InvalidInput(
+            "manual rank must be finite".into(),
         ));
     }
     Ok(())
@@ -239,6 +265,7 @@ mod tests {
                 list_id: "today".to_string(),
                 status: ReminderStatus::Focused,
                 priority: ReminderPriority::High,
+                manual_rank: None,
                 due_at: None,
                 remind_at: None,
                 linked_instance: None,
@@ -253,6 +280,7 @@ mod tests {
                 list_id: "today".to_string(),
                 status: ReminderStatus::Open,
                 priority: ReminderPriority::Normal,
+                manual_rank: None,
                 due_at: None,
                 remind_at: None,
                 linked_instance: None,
@@ -294,6 +322,7 @@ mod tests {
         )
         .expect("patch must parse");
 
+        assert_eq!(input.manual_rank, None);
         assert_eq!(input.due_at, Some(None));
         assert_eq!(
             input.remind_at,

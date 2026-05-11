@@ -22,6 +22,7 @@ export type Reminder = {
   listId: string;
   status: ReminderStatus;
   priority: ReminderPriority;
+  manualRank: number | null;
   dueAt: string | null;
   remindAt: string | null;
   linkedInstance: string | null;
@@ -48,6 +49,7 @@ export type CreateReminderInput = {
   listId: string;
   initialStatus?: Exclude<ReminderStatus, 'focused'>;
   priority?: ReminderPriority;
+  manualRank?: number | null;
 };
 
 export type UpdateReminderInput = {
@@ -56,6 +58,7 @@ export type UpdateReminderInput = {
   listId?: string;
   status?: Exclude<ReminderStatus, 'focused'>;
   priority?: ReminderPriority;
+  manualRank?: number | null;
   dueAt?: string | null;
   remindAt?: string | null;
   linkedInstance?: string | null;

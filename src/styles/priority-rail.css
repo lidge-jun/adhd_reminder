@@ -62,14 +62,29 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
+  cursor: default;
 }
 
-.rail-reminder-body strong,
+.rail-reminder-body .inline-reminder-title,
 .rail-reminder-body small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rail-reminder-body .inline-reminder-title {
+  font-weight: 650;
+}
+
+.rail-next[data-reminder-drop-priority],
+.rail-reminder-row[data-reminder-drop-priority] {
+  outline-offset: -1px;
+}
+
+.priority-rail[data-drag-active="true"] .rail-next[data-reminder-drop-priority],
+.priority-rail[data-drag-active="true"] .rail-reminder-row[data-reminder-drop-priority]:hover {
+  outline: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
 .popover-scrim,

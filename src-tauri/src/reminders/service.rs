@@ -22,6 +22,7 @@ pub fn create_reminder(
         list_id: input.list_id,
         status: input.initial_status.unwrap_or(ReminderStatus::Open),
         priority: input.priority.unwrap_or(ReminderPriority::Normal),
+        manual_rank: input.manual_rank,
         due_at: None,
         remind_at: None,
         linked_instance: None,
@@ -61,6 +62,9 @@ pub fn update_reminder(
     }
     if let Some(priority) = input.priority {
         reminder.priority = priority;
+    }
+    if let Some(manual_rank) = input.manual_rank {
+        reminder.manual_rank = manual_rank;
     }
     if let Some(due_at) = input.due_at {
         reminder.due_at = due_at;
@@ -144,6 +148,7 @@ mod tests {
                 list_id: "today".to_string(),
                 status: ReminderStatus::Focused,
                 priority: ReminderPriority::High,
+                manual_rank: None,
                 due_at: Some("2026-05-08T03:00:00.000Z".to_string()),
                 remind_at: Some("2026-05-08T02:40:00.000Z".to_string()),
                 linked_instance: Some(":3333".to_string()),
@@ -158,6 +163,7 @@ mod tests {
                 list_id: "today".to_string(),
                 status: ReminderStatus::Open,
                 priority: ReminderPriority::Normal,
+                manual_rank: None,
                 due_at: None,
                 remind_at: None,
                 linked_instance: None,
@@ -179,6 +185,7 @@ mod tests {
                 list_id: "today".into(),
                 initial_status: None,
                 priority: None,
+                manual_rank: None,
             },
         )
         .expect("create succeeds");
@@ -202,6 +209,7 @@ mod tests {
                 remind_at: Some(Some("2026-05-08T04:00:00.000Z".into())),
                 linked_instance: None,
                 priority: Some(ReminderPriority::Low),
+                manual_rank: Some(Some(1200.0)),
                 ..Default::default()
             },
         )
@@ -216,6 +224,7 @@ mod tests {
         assert_eq!(reminder.remind_at, Some("2026-05-08T04:00:00.000Z".into()));
         assert_eq!(reminder.linked_instance, Some(":3333".into()));
         assert_eq!(reminder.priority, ReminderPriority::Low);
+        assert_eq!(reminder.manual_rank, Some(1200.0));
     }
 
     #[test]
@@ -228,6 +237,7 @@ mod tests {
                 list_id: Some("later".into()),
                 status: Some(ReminderStatus::Open),
                 priority: Some(ReminderPriority::Low),
+                manual_rank: None,
                 ..Default::default()
             },
         )

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getVisibleReminders,
+  patchReminder,
   selectView,
   setSingleFocus,
   toggleReminder,
@@ -31,5 +32,19 @@ describe('reminder store', () => {
   it('filters smart views without persisting selection to data', () => {
     expect(getVisibleReminders(demoSnapshot, 'focus').map((reminder) => reminder.id)).toEqual(['r-next-1']);
     expect(getVisibleReminders(demoSnapshot, 'done')).toEqual([]);
+  });
+
+  it('uses manual rank before automatic priority ordering', () => {
+    const ranked = patchReminder(
+      patchReminder(demoSnapshot, 'r-next-1', { manualRank: 2000 }),
+      'r-waiting',
+      { manualRank: 1000 },
+    );
+
+    expect(getVisibleReminders(ranked, 'matrix').map((reminder) => reminder.id)).toEqual([
+      'r-focus',
+      'r-waiting',
+      'r-next-1',
+    ]);
   });
 });

@@ -12,8 +12,9 @@ import {
   type ReminderTranslator,
   type TranslationKey,
 } from './reminder.i18n';
-import type { MatrixBucket } from './reminder.matrix';
-import type { SmartListId, UpdateReminderInput } from './reminder.schema';
+import { matrixBucketToUpdateInput, resolveReminderMatrixBucket, type MatrixBucket } from './reminder.matrix';
+import { nextManualRankBetween, rankPriorityReminders } from './reminder.order';
+import type { Reminder, SmartListId, UpdateReminderInput } from './reminder.schema';
 import { useReminderController } from './useReminderController';
 import { useReminderDrag, type ReminderDropTarget } from './useReminderDrag';
 
@@ -22,6 +23,10 @@ const ZOOM_STORAGE_KEY = 'jaw-reminders.zoom';
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 1.6;
 const ZOOM_STEP = 0.1;
+
+type BucketDropTarget = Extract<ReminderDropTarget, { kind: 'bucket' }>;
+type ListDropTarget = Extract<ReminderDropTarget, { kind: 'list' }>;
+type PriorityDropTarget = Extract<ReminderDropTarget, { kind: 'priority' }>;
 
 export function RemindersApp(): React.JSX.Element {
   const controller = useReminderController();
@@ -81,15 +86,30 @@ export function RemindersApp(): React.JSX.Element {
     reminderId: string,
     target: ReminderDropTarget,
   ): Promise<void> {
+    const reminder = snapshot.reminders.find((item) => item.id === reminderId);
+    if (!reminder) {
+      return;
+    }
+
     if (target.kind === 'bucket') {
-      await controller.moveReminderToBucket(reminderId, target.bucket);
+      await controller.updateReminderById(
+        reminderId,
+        orderedPatchForBucketDrop(snapshot.reminders, reminder, target),
+      );
       return;
     }
     if (target.kind === 'done') {
       await controller.updateReminderById(reminderId, { status: 'done' });
       return;
     }
-    await controller.updateReminderById(reminderId, inputForListDrop(target.listId));
+    if (target.kind === 'priority') {
+      await controller.updateReminderById(reminderId, orderedPatchForPriorityDrop(snapshot.reminders, reminderId, target));
+      return;
+    }
+    await controller.updateReminderById(
+      reminderId,
+      orderedPatchForListDrop(snapshot.reminders, reminder, target),
+    );
   }
 
   return (
@@ -157,6 +177,7 @@ export function RemindersApp(): React.JSX.Element {
               t={t}
               onSelect={controller.selectReminder}
               onOpenDetails={setEditingReminderId}
+              onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
               onToggle={controller.toggleDone}
               draft={bucketDrafts.urgentImportant}
               onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, urgentImportant: value }))}
@@ -178,6 +199,7 @@ export function RemindersApp(): React.JSX.Element {
               t={t}
               onSelect={controller.selectReminder}
               onOpenDetails={setEditingReminderId}
+              onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
               onToggle={controller.toggleDone}
               draft={bucketDrafts.important}
               onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, important: value }))}
@@ -199,6 +221,7 @@ export function RemindersApp(): React.JSX.Element {
               t={t}
               onSelect={controller.selectReminder}
               onOpenDetails={setEditingReminderId}
+              onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
               onToggle={controller.toggleDone}
               draft={bucketDrafts.waiting}
               onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, waiting: value }))}
@@ -220,6 +243,7 @@ export function RemindersApp(): React.JSX.Element {
               t={t}
               onSelect={controller.selectReminder}
               onOpenDetails={setEditingReminderId}
+              onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
               onToggle={controller.toggleDone}
               draft={bucketDrafts.later}
               onDraftChange={(value) => setBucketDrafts((drafts) => ({ ...drafts, later: value }))}
@@ -245,18 +269,22 @@ export function RemindersApp(): React.JSX.Element {
             }}
             onSelect={controller.selectReminder}
             onOpenDetails={setEditingReminderId}
+            onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
             onToggle={controller.toggleDone}
+            onPointerReminderStart={reminderDrag.startReminderDrag}
           />
         )}
       </section>
 
       <PriorityRail
         snapshot={controller.snapshot}
-        visibleReminders={controller.visibleReminders}
         selectedReminder={controller.selectedReminder}
         t={t}
+        dragActive={reminderDrag.dragActive}
         onOpenDetails={setEditingReminderId}
+        onRename={(reminderId, title) => controller.updateReminderById(reminderId, { title })}
         onToggle={controller.toggleDone}
+        onPointerReminderStart={reminderDrag.startReminderDrag}
       />
 
       <ReminderEditorPopover
@@ -380,6 +408,70 @@ function clearBucketDraftFor(
   setDrafts: React.Dispatch<React.SetStateAction<Record<MatrixBucket, string>>>,
 ): void {
   setDrafts((current) => ({ ...current, [bucket]: '' }));
+}
+
+function orderedPatchForBucketDrop(
+  reminders: Reminder[],
+  reminder: Reminder,
+  target: BucketDropTarget,
+): UpdateReminderInput {
+  const ordered = rankPriorityReminders(
+    reminders.filter((item) => resolveReminderMatrixBucket(item) === target.bucket),
+  );
+  const manualRank = manualRankForDrop(ordered, reminder.id, target.beforeId, target.afterId);
+  const bucketPatch =
+    resolveReminderMatrixBucket(reminder) === target.bucket
+      ? {}
+      : matrixBucketToUpdateInput(target.bucket);
+  return { ...bucketPatch, manualRank };
+}
+
+function orderedPatchForPriorityDrop(
+  reminders: Reminder[],
+  reminderId: string,
+  target: PriorityDropTarget,
+): UpdateReminderInput {
+  return {
+    manualRank: manualRankForDrop(rankPriorityReminders(reminders), reminderId, target.beforeId, target.afterId),
+  };
+}
+
+function orderedPatchForListDrop(
+  reminders: Reminder[],
+  reminder: Reminder,
+  target: ListDropTarget,
+): UpdateReminderInput {
+  const ordered = rankPriorityReminders(reminders.filter((item) => item.listId === target.listId));
+  const listPatch = reminder.listId === target.listId ? {} : inputForListDrop(target.listId);
+  return {
+    ...listPatch,
+    manualRank: manualRankForDrop(ordered, reminder.id, target.beforeId, target.afterId),
+  };
+}
+
+function manualRankForDrop(
+  ordered: Reminder[],
+  reminderId: string,
+  beforeId: string | null,
+  afterId: string | null,
+): number {
+  const { previous, next } = resolveDropNeighbors(ordered, reminderId, beforeId, afterId);
+  return nextManualRankBetween(previous, next);
+}
+
+function resolveDropNeighbors(
+  ordered: Reminder[],
+  reminderId: string,
+  beforeId: string | null,
+  afterId: string | null,
+): { previous: Reminder | null; next: Reminder | null } {
+  const remaining = ordered.filter((item) => item.id !== reminderId);
+  const previous = beforeId ? remaining.find((item) => item.id === beforeId) ?? null : null;
+  const next = afterId ? remaining.find((item) => item.id === afterId) ?? null : null;
+  if (previous || next) return { previous, next };
+  if (beforeId && !afterId) return { previous: remaining[remaining.length - 1] ?? null, next: null };
+  if (!beforeId && afterId) return { previous: null, next: remaining[0] ?? null };
+  return { previous: remaining[remaining.length - 1] ?? null, next: null };
 }
 
 function inputForListDrop(listId: string): UpdateReminderInput {

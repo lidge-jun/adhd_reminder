@@ -12,6 +12,7 @@ import type {
 } from './reminder.schema';
 import { seedSnapshot } from './reminder.fixtures';
 import { resolveReminderMatrixBucket } from './reminder.matrix';
+import { compareManualReminderOrder } from './reminder.order';
 
 export const smartListIds: SmartListId[] = ['today', 'focus', 'waiting', 'later', 'done'];
 
@@ -26,6 +27,7 @@ export function createReminder(input: CreateReminderInput): Reminder {
     listId: input.listId,
     status: input.initialStatus ?? 'open',
     priority: input.priority ?? 'normal',
+    manualRank: input.manualRank ?? null,
     dueAt: null,
     remindAt: null,
     linkedInstance: null,
@@ -124,7 +126,7 @@ export function loadBrowserSnapshot(): ReminderSnapshot {
 
     const parsed: unknown = JSON.parse(raw);
     if (isReminderSnapshot(parsed)) {
-      return parsed;
+      return normalizeSnapshot(parsed);
     }
     console.error('[reminders] ignored malformed browser snapshot');
     return seedSnapshot;
@@ -132,6 +134,19 @@ export function loadBrowserSnapshot(): ReminderSnapshot {
     console.error('[reminders] failed to load browser snapshot', error);
     return seedSnapshot;
   }
+}
+
+function normalizeSnapshot(snapshot: ReminderSnapshot): ReminderSnapshot {
+  return {
+    ...snapshot,
+    reminders: snapshot.reminders.map((reminder) => ({
+      ...reminder,
+      manualRank:
+        typeof reminder.manualRank === 'number' && Number.isFinite(reminder.manualRank)
+          ? reminder.manualRank
+          : null,
+    })),
+  };
 }
 
 function isReminderSnapshot(value: unknown): value is ReminderSnapshot {
@@ -174,18 +189,18 @@ export function selectRemindersForView(
   viewId: ReminderViewId,
 ): Reminder[] {
   if (viewId === 'matrix') {
-    return reminders.filter((reminder) => reminder.status !== 'done');
+    return reminders.filter((reminder) => reminder.status !== 'done').sort(compareManualReminderOrder);
   }
   if (viewId === 'done') {
-    return reminders.filter((reminder) => reminder.status === 'done');
+    return reminders.filter((reminder) => reminder.status === 'done').sort(compareManualReminderOrder);
   }
-  if (viewId === 'today')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'urgentImportant');
-  if (viewId === 'focus')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'important');
-  if (viewId === 'waiting') return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'waiting');
-  if (viewId === 'later')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'later');
+  if (viewId === 'today')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'urgentImportant').sort(compareManualReminderOrder);
+  if (viewId === 'focus')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'important').sort(compareManualReminderOrder);
+  if (viewId === 'waiting') return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'waiting').sort(compareManualReminderOrder);
+  if (viewId === 'later')   return reminders.filter((r) => resolveReminderMatrixBucket(r) === 'later').sort(compareManualReminderOrder);
 
   const listId = viewId.slice('list:'.length);
-  return reminders.filter((reminder) => reminder.listId === listId);
+  return reminders.filter((reminder) => reminder.listId === listId).sort(compareManualReminderOrder);
 }
 
 export function getVisibleReminders(snapshot: ReminderSnapshot, viewId = snapshot.selectedViewId): Reminder[] {

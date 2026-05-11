@@ -3,6 +3,7 @@ import { formatRelativeDate } from '../reminder.date-format';
 import type { ReminderLocale, ReminderTranslator, TranslationKey } from '../reminder.i18n';
 import type { Reminder, SmartListId } from '../reminder.schema';
 import type { MatrixBucket } from '../reminder.matrix';
+import { InlineReminderTitle } from './InlineReminderTitle';
 
 type Tone = 'red' | 'green' | 'amber' | 'blue' | 'grey';
 
@@ -31,7 +32,13 @@ type SingleListViewProps = {
   onAdd: (bucket: MatrixBucket, title: string) => Promise<void>;
   onSelect: (reminderId: string) => void;
   onOpenDetails: (reminderId: string) => void;
+  onRename: (reminderId: string, title: string) => Promise<void>;
   onToggle: (reminderId: string) => Promise<void>;
+  onPointerReminderStart: (
+    reminderId: string,
+    event: React.PointerEvent<HTMLElement>,
+    options: { title: string },
+  ) => void;
 };
 
 export function SingleListView({
@@ -45,27 +52,40 @@ export function SingleListView({
   onAdd,
   onSelect,
   onOpenDetails,
+  onRename,
   onToggle,
+  onPointerReminderStart,
 }: SingleListViewProps): React.JSX.Element {
   const meta = VIEW_META[viewId];
 
   return (
-    <section className={`single-list-view tone-${meta.tone}`} aria-label={t(meta.titleKey)}>
+    <section
+      className={`single-list-view tone-${meta.tone}`}
+      aria-label={t(meta.titleKey)}
+      data-reminder-drop-bucket={meta.bucket ?? undefined}
+      data-reminder-drop-action={meta.bucket ? undefined : 'done'}
+      data-reminder-drop-before-id={reminders.at(-1)?.id ?? undefined}
+    >
       <header>
         <h2>{t(meta.titleKey)}</h2>
         <span>{reminders.length}</span>
       </header>
       <ul>
-        {reminders.map((reminder) => (
+        {reminders.map((reminder, index) => (
           <SingleListRow
             key={reminder.id}
             reminder={reminder}
+            bucket={meta.bucket}
+            beforeId={reminders[index - 1]?.id ?? null}
+            afterId={reminder.id}
             selected={selectedReminderId === reminder.id}
             t={t}
             locale={locale}
             onSelect={onSelect}
             onOpenDetails={onOpenDetails}
+            onRename={onRename}
             onToggle={onToggle}
+            onPointerDragStart={onPointerReminderStart}
           />
         ))}
         {meta.bucket ? (
@@ -96,28 +116,49 @@ export function SingleListView({
 
 type SingleListRowProps = {
   reminder: Reminder;
+  bucket: MatrixBucket | null;
+  beforeId: string | null;
+  afterId: string | null;
   selected: boolean;
   t: ReminderTranslator;
   locale: ReminderLocale;
   onSelect: (reminderId: string) => void;
   onOpenDetails: (reminderId: string) => void;
+  onRename: (reminderId: string, title: string) => Promise<void>;
   onToggle: (reminderId: string) => Promise<void>;
+  onPointerDragStart: (
+    reminderId: string,
+    event: React.PointerEvent<HTMLElement>,
+    options: { title: string },
+  ) => void;
 };
 
 function SingleListRow({
   reminder,
+  bucket,
+  beforeId,
+  afterId,
   selected,
   t,
   locale,
   onSelect,
   onOpenDetails,
+  onRename,
   onToggle,
+  onPointerDragStart,
 }: SingleListRowProps): React.JSX.Element {
   const done = reminder.status === 'done';
   const dateHint = formatRelativeDate(reminder.dueAt ?? reminder.remindAt, locale);
 
   return (
-    <li className={`matrix-reminder-row ${selected ? 'is-selected' : ''} ${done ? 'is-done' : ''}`}>
+    <li
+      className={`matrix-reminder-row ${selected ? 'is-selected' : ''} ${done ? 'is-done' : ''}`}
+      data-reminder-drop-bucket={bucket ?? undefined}
+      data-reminder-drop-action={bucket ? undefined : 'done'}
+      data-reminder-drop-before-id={beforeId ?? undefined}
+      data-reminder-drop-after-id={afterId ?? undefined}
+      onPointerDown={(event) => onPointerDragStart(reminder.id, event, { title: reminder.title })}
+    >
       <button
         type="button"
         className="row-check"
@@ -126,11 +167,11 @@ function SingleListRow({
       >
         {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} weight="regular" />}
       </button>
-      <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
-        <span>{reminder.title}</span>
+      <div className="row-content" role="button" tabIndex={0} onClick={() => onSelect(reminder.id)}>
+        <InlineReminderTitle reminder={reminder} onRename={onRename} />
         <small>{subtitleForReminder(reminder, t)}</small>
         {dateHint ? <small className="row-date-hint">{dateHint}</small> : null}
-      </button>
+      </div>
       <button
         type="button"
         className="row-detail-button"

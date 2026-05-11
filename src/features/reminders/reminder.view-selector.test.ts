@@ -10,6 +10,7 @@ function makeReminder(partial: Partial<Reminder>): Reminder {
     listId: partial.listId ?? 'today',
     status: partial.status ?? 'open',
     priority: partial.priority ?? 'normal',
+    manualRank: partial.manualRank ?? null,
     dueAt: null,
     remindAt: null,
     linkedInstance: null,
@@ -32,11 +33,11 @@ describe('selectRemindersForView', () => {
   it('matrix excludes done items only', () => {
     const result = selectRemindersForView(reminders, 'matrix');
     expect(result.map((r) => r.id)).toEqual([
-      'r-today-open',
       'r-focused',
+      'r-today-open',
       'r-waiting',
-      'r-later',
       'r-custom',
+      'r-later',
     ]);
   });
 
@@ -47,7 +48,7 @@ describe('selectRemindersForView', () => {
 
   it('today returns matrix urgentImportant bucket items', () => {
     const result = selectRemindersForView(reminders, 'today');
-    expect(result.map((r) => r.id)).toEqual(['r-today-open', 'r-focused']);
+    expect(result.map((r) => r.id)).toEqual(['r-focused', 'r-today-open']);
   });
 
   it('focus returns matrix important bucket items', () => {

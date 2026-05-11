@@ -4,9 +4,10 @@ import type { MatrixBucket } from './reminder.matrix';
 const POINTER_DRAG_THRESHOLD = 6;
 
 export type ReminderDropTarget =
-  | { kind: 'bucket'; bucket: MatrixBucket }
+  | { kind: 'bucket'; bucket: MatrixBucket; beforeId: string | null; afterId: string | null }
   | { kind: 'done' }
-  | { kind: 'list'; listId: string };
+  | { kind: 'list'; listId: string; beforeId: string | null; afterId: string | null }
+  | { kind: 'priority'; beforeId: string | null; afterId: string | null };
 
 export type ReminderDragPreview = {
   reminderId: string;
@@ -121,7 +122,7 @@ export function useReminderDrag({ onDrop }: UseReminderDragOptions): ReminderDra
     if (event.button !== 0) {
       return;
     }
-    if (event.target instanceof HTMLElement && event.target.closest('.row-check, .row-detail-button')) {
+    if (event.target instanceof HTMLElement && event.target.closest('.row-check, .row-detail-button, [data-reminder-inline-edit="true"]')) {
       return;
     }
 
@@ -165,15 +166,20 @@ function reminderDropTargetFromElement(element: Element | null): ReminderDropTar
   }
 
   const target = element.closest<HTMLElement>(
-    '[data-reminder-drop-bucket], [data-reminder-drop-action], [data-reminder-drop-list-id]',
+    '[data-reminder-drop-priority], [data-reminder-drop-bucket], [data-reminder-drop-action], [data-reminder-drop-list-id]',
   );
   if (!target) {
     return null;
   }
 
+  const order = orderFromTarget(target);
+  if (target.dataset.reminderDropPriority !== undefined) {
+    return { kind: 'priority', ...order };
+  }
+
   const bucket = target.dataset.reminderDropBucket;
   if (isMatrixBucket(bucket)) {
-    return { kind: 'bucket', bucket };
+    return { kind: 'bucket', bucket, ...order };
   }
 
   if (target.dataset.reminderDropAction === 'done') {
@@ -181,7 +187,14 @@ function reminderDropTargetFromElement(element: Element | null): ReminderDropTar
   }
 
   const listId = target.dataset.reminderDropListId;
-  return listId ? { kind: 'list', listId } : null;
+  return listId ? { kind: 'list', listId, ...order } : null;
+}
+
+function orderFromTarget(target: HTMLElement): { beforeId: string | null; afterId: string | null } {
+  return {
+    beforeId: target.dataset.reminderDropBeforeId || null,
+    afterId: target.dataset.reminderDropAfterId || null,
+  };
 }
 
 function isMatrixBucket(value: string | undefined): value is MatrixBucket {

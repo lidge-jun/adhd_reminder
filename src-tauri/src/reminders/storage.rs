@@ -170,6 +170,7 @@ mod tests {
             list_id: "missing".into(),
             status: ReminderStatus::Open,
             priority: ReminderPriority::Normal,
+            manual_rank: None,
             due_at: None,
             remind_at: None,
             linked_instance: None,

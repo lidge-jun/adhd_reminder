@@ -385,6 +385,7 @@
   min-width: 0;
   padding: 0;
   text-align: left;
+  cursor: default;
 }
 
 .row-content span,
@@ -398,6 +399,22 @@
 .row-content span {
   font-size: 14px;
   line-height: 1.35;
+}
+
+.inline-reminder-title {
+  max-width: 100%;
+  cursor: text;
+}
+
+.inline-reminder-title-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, var(--border));
+  border-radius: 5px;
+  padding: 1px 5px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
 }
 
 .row-content small {

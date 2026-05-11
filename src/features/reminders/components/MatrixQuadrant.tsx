@@ -4,6 +4,7 @@ import type { ReminderLocale, ReminderTranslator, TranslationKey } from '../remi
 import type { MatrixBucket } from '../reminder.matrix';
 import type { Reminder } from '../reminder.schema';
 import type { MatrixGroups } from '../useReminderController';
+import { InlineReminderTitle } from './InlineReminderTitle';
 
 type MatrixQuadrantProps = {
   bucket: MatrixBucket;
@@ -20,6 +21,7 @@ type MatrixQuadrantProps = {
   onAdd: () => Promise<void>;
   onSelect: (reminderId: string) => void;
   onOpenDetails: (reminderId: string) => void;
+  onRename: (reminderId: string, title: string) => Promise<void>;
   onToggle: (reminderId: string) => Promise<void>;
   onPointerReminderStart: (
     reminderId: string,
@@ -43,6 +45,7 @@ export function MatrixQuadrant({
   onAdd,
   onSelect,
   onOpenDetails,
+  onRename,
   onToggle,
   onPointerReminderStart,
 }: MatrixQuadrantProps): React.JSX.Element {
@@ -50,6 +53,7 @@ export function MatrixQuadrant({
     <section
       className={`matrix-quadrant tone-${tone}`}
       data-reminder-drop-bucket={bucket}
+      data-reminder-drop-before-id={reminders.at(-1)?.id ?? undefined}
       data-drag-active={dragActive ? 'true' : 'false'}
     >
       <header>
@@ -57,15 +61,19 @@ export function MatrixQuadrant({
         <span>{count}</span>
       </header>
       <ul>
-        {reminders.map((reminder) => (
+        {reminders.map((reminder, index) => (
           <MatrixReminderRow
             key={reminder.id}
             reminder={reminder}
+            bucket={bucket}
+            beforeId={reminders[index - 1]?.id ?? null}
+            afterId={reminder.id}
             selected={selectedReminderId === reminder.id}
             t={t}
             locale={locale}
             onSelect={onSelect}
             onOpenDetails={onOpenDetails}
+            onRename={onRename}
             onToggle={onToggle}
             onPointerDragStart={onPointerReminderStart}
           />
@@ -94,11 +102,15 @@ export function MatrixQuadrant({
 
 type MatrixReminderRowProps = {
   reminder: Reminder;
+  bucket: MatrixBucket;
+  beforeId: string | null;
+  afterId: string | null;
   selected: boolean;
   t: ReminderTranslator;
   locale: ReminderLocale;
   onSelect: (reminderId: string) => void;
   onOpenDetails: (reminderId: string) => void;
+  onRename: (reminderId: string, title: string) => Promise<void>;
   onToggle: (reminderId: string) => Promise<void>;
   onPointerDragStart: (
     reminderId: string,
@@ -109,11 +121,15 @@ type MatrixReminderRowProps = {
 
 function MatrixReminderRow({
   reminder,
+  bucket,
+  beforeId,
+  afterId,
   selected,
   t,
   locale,
   onSelect,
   onOpenDetails,
+  onRename,
   onToggle,
   onPointerDragStart,
 }: MatrixReminderRowProps): React.JSX.Element {
@@ -123,17 +139,20 @@ function MatrixReminderRow({
   return (
     <li
       className={`matrix-reminder-row ${selected ? 'is-selected' : ''} ${done ? 'is-done' : ''}`}
+      data-reminder-drop-bucket={bucket}
+      data-reminder-drop-before-id={beforeId ?? undefined}
+      data-reminder-drop-after-id={afterId ?? undefined}
       draggable={false}
       onPointerDown={(event) => onPointerDragStart(reminder.id, event, { title: reminder.title })}
     >
       <button type="button" className="row-check" aria-label={t(`status.${done ? 'open' : 'done'}` as TranslationKey)} onClick={() => void onToggle(reminder.id)}>
         {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} weight="regular" />}
       </button>
-      <button type="button" className="row-content" onClick={() => onSelect(reminder.id)}>
-        <span>{reminder.title}</span>
+      <div className="row-content" role="button" tabIndex={0} onClick={() => onSelect(reminder.id)}>
+        <InlineReminderTitle reminder={reminder} onRename={onRename} />
         <small>{subtitleForReminder(reminder, t)}</small>
         {dateHint ? <small className="row-date-hint">{dateHint}</small> : null}
-      </button>
+      </div>
       <button type="button" className="row-detail-button" aria-label={t('popover.title')} onClick={() => onOpenDetails(reminder.id)}>
         <DotsThree size={18} weight="bold" />
       </button>
