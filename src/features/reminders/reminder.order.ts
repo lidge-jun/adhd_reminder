@@ -5,9 +5,9 @@ export const DEFAULT_MANUAL_RANK_STEP = 1000;
 export function compareManualReminderOrder(left: Reminder, right: Reminder): number {
   return (
     focusedScore(left) - focusedScore(right) ||
+    priorityScore(left) - priorityScore(right) ||
     manualRankScore(left) - manualRankScore(right) ||
     nextTimeScore(left) - nextTimeScore(right) ||
-    priorityScore(left) - priorityScore(right) ||
     Date.parse(left.createdAt) - Date.parse(right.createdAt)
   );
 }

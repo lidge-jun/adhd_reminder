@@ -3,10 +3,10 @@ import { demoSnapshot } from './reminder.fixtures';
 import { nextManualRankBetween, rankPriorityReminders } from './reminder.order';
 
 describe('reminder manual ordering', () => {
-  it('ranks manual priorities before time and priority fallback', () => {
+  it('keeps urgent reminders ahead and applies manual ranks inside urgency tiers', () => {
     const reminders = demoSnapshot.reminders.map((reminder) => {
-      if (reminder.id === 'r-next-1') return { ...reminder, manualRank: 2000 };
-      if (reminder.id === 'r-waiting') return { ...reminder, manualRank: 1000 };
+      if (reminder.id === 'r-next-1') return { ...reminder, priority: 'normal' as const, manualRank: 1000 };
+      if (reminder.id === 'r-waiting') return { ...reminder, status: 'open' as const, priority: 'high' as const, manualRank: 2000 };
       return reminder;
     });
 
