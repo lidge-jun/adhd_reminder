@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jaw Reminders mark">
+  <rect width="64" height="64" rx="14" fill="#111827"/>
+  <path d="M18 19h28v7H25v9h17v7H25v3h23v7H18V19Z" fill="#ffffff"/>
+  <path d="M43 16h8v8h-8zM43 30h8v8h-8zM43 44h8v8h-8z" fill="#b91c1c"/>
+</svg>

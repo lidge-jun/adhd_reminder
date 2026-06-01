@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jaw Reminders - Local Reminder App for CLI-JAW Work</title>
+    <meta
+      name="description"
+      content="Jaw Reminders is a Tauri and React reminder app for agent-heavy CLI-JAW workflows: one focus, next actions, waiting state, and local persistence."
+    />
+    <link rel="canonical" href="https://lidge-jun.github.io/adhd_reminder/" />
+    <meta property="og:title" content="Jaw Reminders" />
+    <meta
+      property="og:description"
+      content="Local reminders for CLI-JAW work, with a Tauri native shell and React priority matrix."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://lidge-jun.github.io/adhd_reminder/" />
+    <meta property="og:image" content="https://lidge-jun.github.io/adhd_reminder/assets/social-preview.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jaw Reminders" />
+    <meta
+      name="twitter:description"
+      content="A local-first reminder app for agent-heavy CLI-JAW workflows."
+    />
+    <meta name="twitter:image" content="https://lidge-jun.github.io/adhd_reminder/assets/social-preview.svg" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        color: #111827;
+        background: #f6f3ef;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 850;
+        text-decoration: none;
+      }
+
+      .mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 10px;
+        background: #111827;
+        color: #fff;
+        font-size: 12px;
+      }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 16px;
+        color: #4b5563;
+        font-size: 14px;
+        font-weight: 750;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+        gap: 40px;
+        align-items: center;
+        min-height: calc(100vh - 86px);
+        padding: 34px 0 72px;
+      }
+
+      .eyebrow {
+        color: #b91c1c;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 14px 0 18px;
+        font-size: clamp(42px, 7vw, 84px);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 650px;
+        color: #4b5563;
+        font-size: clamp(18px, 2vw, 22px);
+      }
+
+      .actions,
+      .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        border-radius: 8px;
+        padding: 0 16px;
+        background: #111827;
+        color: #fff;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        border: 1px solid #e5ded9;
+        background: #fff;
+        color: #111827;
+      }
+
+      .stat,
+      .panel,
+      .card {
+        border: 1px solid #e5ded9;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .stat {
+        min-width: 132px;
+        padding: 14px;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 24px;
+      }
+
+      .stat span {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .panel {
+        min-width: 0;
+        box-shadow: 0 24px 70px rgb(17 24 39 / 0.08);
+        overflow: hidden;
+      }
+
+      .app-frame {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr) 190px;
+        min-height: 430px;
+      }
+
+      .sidebar,
+      .rail {
+        background: #faf9f7;
+        padding: 18px;
+      }
+
+      .sidebar {
+        border-right: 1px solid #eee7e3;
+      }
+
+      .rail {
+        border-left: 1px solid #eee7e3;
+      }
+
+      .chip {
+        margin-bottom: 10px;
+        border-radius: 7px;
+        padding: 8px 10px;
+        background: #fff;
+        color: #4b5563;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+
+      .quad {
+        min-height: 170px;
+        padding: 18px;
+      }
+
+      .quad:nth-child(1),
+      .quad:nth-child(2) {
+        border-bottom: 1px solid #eee7e3;
+      }
+
+      .quad:nth-child(1),
+      .quad:nth-child(3) {
+        border-right: 1px solid #eee7e3;
+      }
+
+      .quad strong {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .row {
+        margin-top: 10px;
+        border: 1px solid #eee7e3;
+        border-radius: 7px;
+        padding: 10px;
+        color: #374151;
+        font-size: 13px;
+      }
+
+      section {
+        padding: 70px 0;
+        border-top: 1px solid #e5ded9;
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: clamp(30px, 4vw, 54px);
+        line-height: 1;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+      }
+
+      .card p,
+      .card code {
+        color: #4b5563;
+      }
+
+      .card code {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      footer {
+        padding: 34px 0;
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        nav {
+          justify-content: flex-start;
+        }
+
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          min-height: auto;
+          padding-top: 20px;
+        }
+
+        .app-frame {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar,
+        .rail {
+          border: 0;
+          border-bottom: 1px solid #eee7e3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell">
+      <a class="brand" href="https://github.com/lidge-jun/adhd_reminder">
+        <span class="mark">JR</span>
+        <span>Jaw Reminders</span>
+      </a>
+      <nav aria-label="Primary">
+        <a href="#workflow">Workflow</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#verification">Verification</a>
+        <a href="https://github.com/lidge-jun/adhd_reminder">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="shell hero">
+        <div>
+          <div class="eyebrow">Local-first reminder app</div>
+          <h1>One focus, next actions, quiet backlog.</h1>
+          <p class="lede">
+            Jaw Reminders is a Tauri and React prototype for agent-heavy CLI-JAW work. It keeps reminders local,
+            separates waiting state from active work, and gives the current focus a dedicated rail.
+          </p>
+          <div class="actions" aria-label="Primary links">
+            <a class="button" href="https://github.com/lidge-jun/adhd_reminder">Open repository</a>
+            <a class="button secondary" href="https://github.com/lidge-jun/adhd_reminder/blob/main/README.md">Read README</a>
+          </div>
+          <div class="stats" aria-label="Project signals">
+            <div class="stat"><strong>Tauri</strong><span>native shell</span></div>
+            <div class="stat"><strong>React</strong><span>interaction UI</span></div>
+            <div class="stat"><strong>local</strong><span>data default</span></div>
+          </div>
+        </div>
+
+        <aside class="panel" aria-label="App surface preview">
+          <div class="app-frame">
+            <div class="sidebar">
+              <div class="chip">Today</div>
+              <div class="chip">Focus</div>
+              <div class="chip">Waiting</div>
+              <div class="chip">Later</div>
+            </div>
+            <div class="matrix">
+              <div class="quad">
+                <strong>Important now</strong>
+                <div class="row">Current focus</div>
+              </div>
+              <div class="quad">
+                <strong>Urgent next</strong>
+                <div class="row">Confirm CI</div>
+              </div>
+              <div class="quad">
+                <strong>Plan</strong>
+                <div class="row">Write checkpoint</div>
+              </div>
+              <div class="quad">
+                <strong>Later</strong>
+                <div class="row">Backlog item</div>
+              </div>
+            </div>
+            <div class="rail">
+              <div class="chip">Focus: 1</div>
+              <div class="chip">Next: 3</div>
+              <div class="chip">Cutoff ready</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <section id="workflow">
+        <div class="shell">
+          <h2>Built for short, fragile follow-ups.</h2>
+          <div class="grid">
+            <article class="card">
+              <h3>Capture inline</h3>
+              <p>Each matrix quadrant owns its own add row, so triage and capture happen in the same place.</p>
+            </article>
+            <article class="card">
+              <h3>Keep one focus</h3>
+              <p>The native mutation layer enforces a single focused reminder instead of allowing several competing priorities.</p>
+            </article>
+            <article class="card">
+              <h3>Separate waiting</h3>
+              <p>Blocked reminders move out of the active lane without disappearing from the work context.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="shell">
+          <h2>React handles interaction. Rust owns durable state.</h2>
+          <div class="grid">
+            <article class="card">
+              <h3>Frontend</h3>
+              <p>React 19, strict TypeScript, feature modules under <code>src/features/reminders</code>, and Vite for browser iteration.</p>
+            </article>
+            <article class="card">
+              <h3>Native</h3>
+              <p>Tauri commands route reminder mutations to Rust for persistence, validation, and notification display.</p>
+            </article>
+            <article class="card">
+              <h3>Privacy</h3>
+              <p>Browser fallback uses localStorage. Native mode writes a local JSON snapshot in the app data directory.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="verification">
+        <div class="shell">
+          <h2>Verification surface.</h2>
+          <div class="grid">
+            <article class="card">
+              <h3>Frontend</h3>
+              <p><code>npm run typecheck</code>, <code>npm test</code>, and <code>npm run build</code>.</p>
+            </article>
+            <article class="card">
+              <h3>Native</h3>
+              <p><code>npm run tauri:check</code> and <code>npm run tauri:test</code>.</p>
+            </article>
+            <article class="card">
+              <h3>Pages</h3>
+              <p>Prepared from <code>/docs</code>. Public deployment requires an authorized push because Pages is not currently enabled.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell">
+      Jaw Reminders has no declared root license at this checkpoint. Treat reminder exports as private if they include personal workflow data.
+    </footer>
+  </body>
+</html>
